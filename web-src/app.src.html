@@ -366,6 +366,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
       </div>
       <div class="stage" id="stage">
         <video id="video" playsinline preload="metadata" x-webkit-airplay="allow"></video>
+        <audio id="audio" preload="auto" x-webkit-airplay="allow" hidden></audio>
         <div class="art" id="art">
           <div class="art-inner" id="artAudio" hidden>
             <div class="art-cover" id="artCover"><img src="{{mark}}" alt=""></div>
@@ -452,6 +453,9 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 const I = {{icons_json}};
 const $ = (id) => document.getElementById(id);
 const video = $("video");
+/* Müzikler ayrı bir ses öğesiyle çalınır: iPhone, ekran kilitliyken ses öğesinin çalmaya devam etmesine izin verir */
+const audioEl = $("audio");
+let media = video; // o an çalan öğe (video ya da ses)
 
 /* ================================================================ yardımcılar */
 const pad = (n) => String(Math.floor(n)).padStart(2, "0");
@@ -535,7 +539,7 @@ function tx(store, mode, fn) {
     } catch (e) { rej(e); }
   });
 }
-const dbPutMeta = (m) => tx("meta", "readwrite", (s) => { const c = { ...m }; delete c.blob; delete c.url; delete c.now; return s.put(c); }).catch(() => {});
+const dbPutMeta = (m) => tx("meta", "readwrite", (s) => { const c = { ...m }; delete c.blob; delete c.url; delete c.now; delete c.__fromDb; return s.put(c); }).catch(() => {});
 const dbPutFile = (id, blob) => tx("files", "readwrite", (s) => s.put(blob, id));
 const dbGetFile = (id) => tx("files", "readonly", (s) => s.get(id)).catch(() => null);
 const dbAllMeta = () => tx("meta", "readonly", (s) => s.getAll()).catch(() => []);
@@ -736,12 +740,12 @@ document.addEventListener("dragover", (e) => e.preventDefault());
 document.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) importFiles([...e.dataTransfer.files]); });
 
 async function importFiles(files) {
-  const media = files.filter((f) => f.type.startsWith("video/") || f.type.startsWith("audio/") || VIDEO_EXT.test(f.name) || AUDIO_EXT.test(f.name));
-  if (!media.length) { toast("Seçilenler arasında video veya müzik dosyası yok."); return; }
-  toast(`${media.length} dosya ekleniyor…`, 1800);
+  const picked = files.filter((f) => f.type.startsWith("video/") || f.type.startsWith("audio/") || VIDEO_EXT.test(f.name) || AUDIO_EXT.test(f.name));
+  if (!picked.length) { toast("Seçilenler arasında video veya müzik dosyası yok."); return; }
+  toast(`${picked.length} dosya ekleniyor…`, 1800);
   let stored = 0, failed = 0;
   const added = [];
-  for (const f of media) {
+  for (const f of picked) {
     const dup = state.items.find((m) => m.name === f.name && m.size === f.size);
     if (dup) continue;
     const isVideo = f.type.startsWith("video/") || (!f.type.startsWith("audio/") && VIDEO_EXT.test(f.name));
@@ -770,7 +774,7 @@ async function importFiles(files) {
   try { navigator.storage?.persist?.(); } catch {}
   probeQueue.push(...added);
   runProbe();
-  if (!state.current || wasSample) { video.pause(); prepare(added[0], [...added]); }
+  if (!state.current || wasSample) { media.pause(); prepare(added[0], [...added]); }
 }
 
 /* Süre, çözünürlük ve küçük resim: gizli bir video öğesiyle sırayla okunur */
@@ -790,7 +794,7 @@ async function runProbe() {
 async function blobOf(m) {
   if (m.blob) return m.blob;
   const b = await dbGetFile(m.id);
-  if (b) m.blob = b;
+  if (b) { m.blob = b; m.__fromDb = true; }
   return b;
 }
 async function probe(m) {
@@ -848,52 +852,83 @@ function prepare(m, list) {
   load(m, false);
 }
 
+function onMedia(ev, fn) {
+  [video, audioEl].forEach((el) => el.addEventListener(ev, (e) => { if (e.target === media) fn(e); }));
+}
+
 let pendingResume = 0, pendingPlay = false;
-async function load(m, autoplay) {
+function load(m, autoplay) {
   saveProgress(true);
-  const blob = await blobOf(m);
-  if (!blob) { toast(`"${m.title}" açılamadı. Dosya bu tarayıcıda bulunamadı; yeniden ekleyin.`, 4000); return; }
+  // Dosya hafızadaysa hiç beklemeden başlat: kilitli ekranda şarkı geçişinin çalışması için şart
+  if (m.blob) start(m, m.blob, autoplay);
+  else blobOf(m).then((blob) => {
+    if (!blob) { toast(`"${m.title}" açılamadı. Dosya bu tarayıcıda bulunamadı; yeniden ekleyin.`, 4000); return; }
+    start(m, blob, autoplay);
+  });
+}
+function start(m, blob, autoplay) {
+  const target = m.type === "video" ? video : audioEl;
+  if (target !== media) {
+    media.pause();
+    media.removeAttribute("src"); media.load();
+    media = target;
+  }
   if (state.url) URL.revokeObjectURL(state.url);
   state.url = URL.createObjectURL(blob);
   state.current = m;
   settings.last = m.id; saveSettings();
   pendingResume = settings.resume && m.pos > 5 && m.duration && m.pos < m.duration - 8 ? m.pos : 0;
   pendingPlay = autoplay;
-  video.src = state.url;
-  video.playbackRate = settings.speed;
-  video.load();
+  media.src = state.url;
+  media.playbackRate = settings.speed;
+  media.volume = settings.volume / 100;
   if (autoplay) {
     m.lastPlayed = Date.now(); m.plays = (m.plays || 0) + 1; save(m);
-    video.play().catch(() => {});
-  }
+    media.play().catch(() => {});
+  } else media.load();
   updateNowPlaying();
   render();
+  prefetchNext();
 }
-video.addEventListener("loadedmetadata", () => {
+/* Sıradaki parçayı veritabanından hafızaya al; bellek dolmasın diye yalnızca bir sonrakini tut */
+function prefetchNext() {
+  if (!state.order.length) return;
+  const keep = new Set([state.current]);
+  let p = state.pos + 1;
+  if (p >= state.order.length) p = settings.repeat === "off" ? -1 : 0;
+  const nxt = p >= 0 ? state.queue[state.order[p]] : null;
+  if (nxt) keep.add(nxt);
+  // Kalıcı kaydedilmiş, şu an gerekmeyen büyük dosyaları hafızadan bırak (veritabanında duruyorlar)
+  for (const m of state.items) if (m.blob && m.persisted !== false && !m.sample && !keep.has(m) && m !== undefined && m.__fromDb) { m.blob = null; }
+  if (nxt && !nxt.blob) blobOf(nxt).then((b) => { if (b) nxt.__fromDb = true; });
+}
+
+onMedia("loadedmetadata", () => {
   const m = state.current;
   if (m) {
-    if (isFinite(video.duration) && !m.duration) m.duration = video.duration;
-    if (video.videoWidth && !m.width) { m.width = video.videoWidth; m.height = video.videoHeight; }
+    if (isFinite(media.duration) && !m.duration) m.duration = media.duration;
+    if (media.videoWidth && !m.width) { m.width = media.videoWidth; m.height = media.videoHeight; }
     save(m);
   }
-  if (pendingResume) { video.currentTime = pendingResume; pendingResume = 0; }
-  video.playbackRate = settings.speed;
+  if (pendingResume) { media.currentTime = pendingResume; pendingResume = 0; }
+  media.playbackRate = settings.speed;
   updateInfo();
 });
-video.addEventListener("ended", () => {
+onMedia("ended", () => {
   const m = state.current;
   if (m) { m.pos = 0; save(m); }
-  if (settings.repeat === "one") { video.currentTime = 0; video.play().catch(() => {}); return; }
+  if (settings.repeat === "one") { media.currentTime = 0; media.play().catch(() => {}); return; }
   if (settings.autoNext) next(true);
 });
-video.addEventListener("error", () => {
+onMedia("error", () => {
   if (!state.current) return;
   toast(`Bu dosya bu tarayıcıda oynatılamıyor: ${state.current.name}. iPhone Safari MKV, AVI ve FLAC dosyalarını desteklemez; MP4, MOV, MP3 ya da M4A deneyin.`, 6000);
 });
-["play", "pause", "waiting", "playing", "canplay"].forEach((ev) => video.addEventListener(ev, updatePlayState));
-video.addEventListener("pause", () => saveProgress(true));
-video.addEventListener("timeupdate", () => { updateTime(); saveProgress(false); });
-video.addEventListener("durationchange", updateTime);
+["play", "pause", "waiting", "playing", "canplay"].forEach((ev) => onMedia(ev, updatePlayState));
+onMedia("pause", () => saveProgress(true));
+onMedia("timeupdate", () => { updateTime(); saveProgress(false); });
+onMedia("durationchange", updateTime);
+["playing", "pause", "seeked", "ratechange", "loadedmetadata"].forEach((ev) => onMedia(ev, updatePositionState));
 
 function next(auto = false) {
   if (!state.order.length) return;
@@ -908,7 +943,7 @@ function next(auto = false) {
 }
 function prev() {
   if (!state.order.length) return;
-  if (video.currentTime > 3) { video.currentTime = 0; return; }
+  if (media.currentTime > 3) { media.currentTime = 0; return; }
   state.pos = state.pos - 1 < 0 ? state.order.length - 1 : state.pos - 1;
   load(state.queue[state.order[state.pos]], true);
 }
@@ -918,34 +953,40 @@ function togglePlay() {
     if (first) playFromList(first); else addFiles();
     return;
   }
-  if (video.paused) {
-    if (video.ended) video.currentTime = 0;
-    video.play().catch(() => toast("Oynatma başlatılamadı."));
-  } else video.pause();
+  if (media.paused) {
+    if (media.ended) media.currentTime = 0;
+    media.play().catch(() => toast("Oynatma başlatılamadı."));
+  } else media.pause();
 }
 function skip(s) {
-  if (!state.current || !isFinite(video.duration)) return;
-  video.currentTime = Math.min(Math.max(0, video.currentTime + s), Math.max(0, video.duration - 0.3));
+  if (!state.current || !isFinite(media.duration)) return;
+  media.currentTime = Math.min(Math.max(0, media.currentTime + s), Math.max(0, media.duration - 0.3));
 }
 let lastSave = 0;
 function saveProgress(force) {
   const m = state.current;
-  if (!m || !video.currentTime) return;
+  if (!m || !media.currentTime) return;
   const now = Date.now();
   if (!force && now - lastSave < 5000) return;
   lastSave = now;
-  m.pos = video.currentTime;
+  m.pos = media.currentTime;
   save(m);
 }
-document.addEventListener("visibilitychange", () => { if (document.hidden) saveProgress(true); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveProgress(true); else { updateNowPlaying(); render(); } });
 window.addEventListener("pagehide", () => saveProgress(true));
 
 /* ================================================================ arayüz güncelleme */
 function setRange(el, frac) { el.style.setProperty("--p", `${Math.max(0, Math.min(1, frac)) * 100}%`); }
 let seeking = false;
+function updatePositionState() {
+  if (!("mediaSession" in navigator) || !navigator.mediaSession.setPositionState) return;
+  const d = media.duration;
+  if (!isFinite(d) || d <= 0) return;
+  try { navigator.mediaSession.setPositionState({ duration: d, playbackRate: media.playbackRate || 1, position: Math.min(media.currentTime, d) }); } catch {}
+}
 function updateTime() {
-  const d = isFinite(video.duration) ? video.duration : state.current?.duration || 0;
-  const t = video.currentTime || 0;
+  const d = isFinite(media.duration) ? media.duration : state.current?.duration || 0;
+  const t = media.currentTime || 0;
   $("tCur").textContent = fmt(t);
   $("tDur").textContent = fmt(d);
   if (!seeking) { $("seek").value = d ? Math.round((t / d) * 1000) : 0; setRange($("seek"), d ? t / d : 0); }
@@ -953,16 +994,16 @@ function updateTime() {
 }
 function updateInfo() {
   const m = state.current;
-  const d = isFinite(video.duration) ? video.duration : m?.duration || 0;
-  const res = m?.type === "video" && (video.videoWidth || m.width) ? `${video.videoWidth || m.width} × ${video.videoHeight || m.height}   |   ` : "";
-  $("pInfo").textContent = `${res}${fmt(video.currentTime)} / ${fmt(d)}`;
+  const d = isFinite(media.duration) ? media.duration : m?.duration || 0;
+  const res = m?.type === "video" && (media.videoWidth || m.width) ? `${media.videoWidth || m.width} × ${media.videoHeight || m.height}   |   ` : "";
+  $("pInfo").textContent = `${res}${fmt(media.currentTime)} / ${fmt(d)}`;
 }
 function updatePlayState() {
-  const playing = !video.paused && !video.ended;
+  const playing = !media.paused && !media.ended;
   $("playIco").src = playing ? I.pause : I.play;
   $("btnPlay").setAttribute("aria-label", playing ? "Duraklat" : "Oynat");
   $("centerPlay").hidden = playing || state.current?.type !== "video";
-  $("spinner").hidden = !(state.current && !video.paused && video.readyState < 3);
+  $("spinner").hidden = !(state.current && !media.paused && media.readyState < 3);
   if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
 }
 function updateNowPlaying() {
@@ -997,7 +1038,7 @@ function updateModes() {
   $("btnRepeat").setAttribute("aria-label", { off: "Tekrar kapalı", all: "Tümünü tekrarla", one: "Tek parçayı tekrarla" }[settings.repeat]);
   const v = settings.volume;
   $("vol").value = v; $("volVal").textContent = v; setRange($("vol"), v / 100);
-  $("volIco").src = video.muted || v === 0 ? I.mute : I.volume;
+  $("volIco").src = media.muted || v === 0 ? I.mute : I.volume;
 }
 
 /* ================================================================ kontroller */
@@ -1018,21 +1059,21 @@ $("btnRepeat").onclick = () => {
 };
 $("seek").addEventListener("input", (e) => {
   seeking = true;
-  const d = isFinite(video.duration) ? video.duration : 0;
+  const d = isFinite(media.duration) ? media.duration : 0;
   setRange(e.target, e.target.value / 1000);
   $("tCur").textContent = fmt((e.target.value / 1000) * d);
 });
 $("seek").addEventListener("change", (e) => {
-  const d = isFinite(video.duration) ? video.duration : 0;
-  if (d) video.currentTime = (e.target.value / 1000) * d;
+  const d = isFinite(media.duration) ? media.duration : 0;
+  if (d) media.currentTime = (e.target.value / 1000) * d;
   seeking = false;
 });
 $("vol").addEventListener("input", (e) => {
-  settings.volume = +e.target.value; video.volume = settings.volume / 100;
-  if (settings.volume > 0) video.muted = false;
+  settings.volume = +e.target.value; video.volume = audioEl.volume = settings.volume / 100;
+  if (settings.volume > 0) video.muted = audioEl.muted = false;
   saveSettings(); updateModes();
 });
-$("btnMute").onclick = () => { video.muted = !video.muted; updateModes(); };
+$("btnMute").onclick = () => { const m = !media.muted; video.muted = audioEl.muted = m; updateModes(); };
 $("btnFav").onclick = () => state.current && toggleFav(state.current);
 $("btnQueue").onclick = () => { exitFull(); state.tab = "queue"; state.folder = null; render(); $("library").scrollIntoView({ behavior: "smooth", block: "start" }); };
 $("btnMore").onclick = playerMenu;
@@ -1047,8 +1088,8 @@ function toggleFav(m) {
 /* AirPlay (Safari) ya da Chrome'da uzaktan oynatma */
 $("btnCast").onclick = async () => {
   try {
-    if (video.webkitShowPlaybackTargetPicker) { video.webkitShowPlaybackTargetPicker(); return; }
-    if (video.remote?.prompt) { await video.remote.prompt(); return; }
+    if (media.webkitShowPlaybackTargetPicker) { media.webkitShowPlaybackTargetPicker(); return; }
+    if (media.remote?.prompt) { await media.remote.prompt(); return; }
   } catch { /* kullanıcı vazgeçti */ return; }
   toast("Bu tarayıcı ekran yansıtmayı desteklemiyor. iPhone'da Denetim Merkezi › Ekran Yansıtma'yı kullanabilirsiniz.", 4500);
 };
@@ -1109,10 +1150,11 @@ document.addEventListener("keydown", (e) => {
 if ("mediaSession" in navigator) {
   const ms = navigator.mediaSession;
   const h = (a, f) => { try { ms.setActionHandler(a, f); } catch {} };
-  h("play", () => video.play()); h("pause", () => video.pause());
+  h("play", () => media.play()); h("pause", () => media.pause());
+  h("stop", () => media.pause());
   h("previoustrack", prev); h("nexttrack", () => next(false));
   h("seekbackward", () => skip(-10)); h("seekforward", () => skip(10));
-  h("seekto", (d) => { if (d.seekTime != null) video.currentTime = d.seekTime; });
+  h("seekto", (d) => { if (d.seekTime != null) media.currentTime = d.seekTime; });
 }
 
 /* ================================================================ menüler */
@@ -1126,11 +1168,11 @@ async function playerMenu() {
   ] });
   if (v === "speed") {
     const s = await sheet({ title: "Oynatma hızı", items: [0.5, 0.75, 1, 1.25, 1.5, 2].map((x) => ({ label: x === 1 ? "1x (Normal)" : `${x}x`, value: String(x) })) });
-    if (s) { settings.speed = +s; video.playbackRate = settings.speed; saveSettings(); }
+    if (s) { settings.speed = +s; media.playbackRate = settings.speed; saveSettings(); }
   } else if (v === "repeat") $("btnRepeat").click();
   else if (v === "info" && state.current) showInfo(state.current);
   else if (v === "mp3" && state.current) convertItems([state.current]);
-  else if (v === "stop") { video.pause(); video.currentTime = 0; }
+  else if (v === "stop") { media.pause(); media.currentTime = 0; }
 }
 function showInfo(m) {
   const lines = [
@@ -1162,7 +1204,7 @@ async function itemMenu(m) {
   }
 }
 function removeItem(m) {
-  if (state.current === m) { video.pause(); video.removeAttribute("src"); video.load(); state.current = null; updateNowPlaying(); }
+  if (state.current === m) { media.pause(); media.removeAttribute("src"); media.load(); state.current = null; updateNowPlaying(); }
   state.items = state.items.filter((x) => x !== m);
   const qi = state.queue.indexOf(m);
   if (qi >= 0) { state.queue.splice(qi, 1); rebuildOrder(state.current ? state.queue.indexOf(state.current) : -1); }
@@ -1180,7 +1222,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.1\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.2\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1216,7 +1258,7 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.1 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.2 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   ["resume", "autoNext", "store"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
   $("setAdd").onclick = addFiles;
   $("setConvert").onclick = pickAndConvert;
@@ -1454,7 +1496,7 @@ function makeSample() {
 /* ================================================================ başlat */
 (async function init() {
   // iPhone'da ses düzeyi yalnızca telefonun tuşlarıyla değişir
-  video.volume = settings.volume / 100;
+  video.volume = audioEl.volume = settings.volume / 100;
   if (isIOS) $("vol").parentElement.querySelectorAll("input, .vol-val").forEach((el) => (el.hidden = true));
   updateModes();
   try { const t = localStorage.getItem("aurora.tab"); if (t && TABS.some(([k]) => k === t)) state.tab = t; } catch {}
