@@ -326,6 +326,14 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .about img { height: 84px; width: auto; }
 .about small { color: var(--fg-2); }
 
+/* ---------- MP3 dönüştürme ---------- */
+.conv-bar { height: 8px; border-radius: 8px; background: rgba(255,255,255,.14); overflow: hidden; margin: 4px 12px 2px; }
+.conv-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--cyan)); border-radius: 8px; transition: width .2s ease; }
+.conv-meta { display: flex; justify-content: space-between; margin: 0 12px 8px; color: var(--fg-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg button { padding: 10px 6px; border-radius: 12px; background: rgba(17,28,70,.6); border: 1px solid var(--line); font-weight: 500; font-size: 13px; text-align: center; }
+.seg button[aria-pressed="true"] { border: 1.5px solid var(--cyan); box-shadow: 0 0 10px rgba(47,227,255,.4); background: rgba(36,70,143,.5); }
+
 /* ---------- alt sayfa (menü / onay) ---------- */
 .sheet-bg { position: fixed; inset: 0; z-index: 80; background: rgba(2,4,14,.6); display: grid; align-items: end; justify-items: center; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
 .sheet {
@@ -454,6 +462,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 
 <input type="file" id="fileInput" accept="video/*,audio/*,.mkv,.flac,.opus,.ogg" multiple hidden>
 <input type="file" id="folderInput" webkitdirectory multiple hidden>
+<input type="file" id="convertInput" accept="video/*,audio/*" multiple hidden>
 <canvas id="thumbCanvas" width="320" height="180" hidden></canvas>
 
 <script>
@@ -509,7 +518,7 @@ function sheet({ title, text, items = [], cancel = "Kapat" }) {
 /* ================================================================ ayarlar (cihazda) */
 const SKEY = "aurora.settings.v1";
 const settings = Object.assign(
-  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "" },
+  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192 },
   (() => { try { return JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch { return {}; } })()
 );
 const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* depolama kapalı */ } };
@@ -1130,6 +1139,7 @@ async function playerMenu() {
     { label: `Oynatma hızı (${settings.speed}x)`, value: "speed" },
     { label: { off: "Tekrar: kapalı", all: "Tekrar: tümü", one: "Tekrar: tek parça" }[settings.repeat], value: "repeat" },
     { label: "Medya bilgisi", value: "info" },
+    ...(state.current && !isMp3(state.current) ? [{ label: "MP3'e dönüştür", value: "mp3" }] : []),
     { label: "Durdur", value: "stop" },
   ] });
   if (v === "speed") {
@@ -1137,6 +1147,7 @@ async function playerMenu() {
     if (s) { settings.speed = +s; video.playbackRate = settings.speed; saveSettings(); }
   } else if (v === "repeat") $("btnRepeat").click();
   else if (v === "info" && state.current) showInfo(state.current);
+  else if (v === "mp3" && state.current) convertItems([state.current]);
   else if (v === "stop") { video.pause(); video.currentTime = 0; }
 }
 function showInfo(m) {
@@ -1154,9 +1165,13 @@ async function itemMenu(m) {
     { label: "Oynat", value: "play" },
     { label: m.fav ? "Favorilerden çıkar" : "Favorilere ekle", value: "fav" },
     { label: "Medya bilgisi", value: "info" },
+    ...(isMp3(m) ? [] : [{ label: "MP3'e dönüştür", value: "mp3" }]),
+    { label: "Cihaza kaydet (indir)", value: "dl" },
     { label: "Kütüphaneden kaldır", value: "del", danger: true },
   ] });
-  if (v === "play") playFromList(m);
+  if (v === "mp3") convertItems([m]);
+  else if (v === "dl") downloadItem(m);
+  else if (v === "play") playFromList(m);
   else if (v === "fav") toggleFav(m);
   else if (v === "info") showInfo(m);
   else if (v === "del") {
@@ -1173,16 +1188,17 @@ function removeItem(m) {
   render(); toast("Kaldırıldı.");
 }
 $("btnMenu").onclick = async () => {
-  const items = [{ label: "Dosya ekle", value: "add" }];
+  const items = [{ label: "Dosya ekle", value: "add" }, { label: "MP3'e dönüştür", value: "mp3" }];
   if ("webkitdirectory" in $("folderInput") && !isIOS) items.push({ label: "Klasör ekle", value: "folder" });
   items.push({ label: "Sıralama", value: "sort" }, { label: "Oynatma sırası", value: "queue" }, { label: "Ayarlar", value: "settings" }, { label: "Hakkında", value: "about" });
   const v = await sheet({ title: "Aurora Media Player", items });
   if (v === "add") addFiles();
+  else if (v === "mp3") pickAndConvert();
   else if (v === "folder") { $("folderInput").value = ""; $("folderInput").click(); }
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.0\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.1\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1203,6 +1219,12 @@ async function renderSettings() {
       <button class="btn" id="setAdd">Dosya ekle</button>
       <button class="btn" id="setThumbs">Küçük resimleri yenile</button>
     </div>
+    <h4>MP3 DÖNÜŞTÜRME</h4>
+    <div class="set" style="display:grid;gap:10px"><div><b>MP3 kalitesi</b><small>Yüksek kalite daha büyük dosya demektir. 192 kbps çoğu kulaklık için yeterlidir.</small></div>
+      <div class="seg" id="kbpsSeg">${[128, 192, 320].map((k) => `<button data-kbps="${k}" aria-pressed="${settings.mp3kbps === k}">${k} kbps</button>`).join("")}</div>
+      <button class="add-btn" id="setConvert" style="justify-self:start">Dosya seç ve MP3'e dönüştür</button>
+      <small>Dönüştürülen MP3'ler kütüphanenin veritabanına kaydedilir ve Klasörler › MP3 Dönüştürülenler altında görünür. Dosyalar cihazdan dışarı gönderilmez.</small>
+    </div>
     <h4>iPhone'DA UYGULAMA GİBİ KULLANIN</h4>
     <div class="set"><div><b>Ana Ekrana Ekle</b><small>Safari'de bu sayfayı açın, alttaki Paylaş düğmesine dokunun ve "Ana Ekrana Ekle"yi seçin. Aurora, ana ekranınızda simgesiyle tam ekran açılır.</small></div></div>
     <h4>VERİLER</h4>
@@ -1212,9 +1234,14 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.0 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.1 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   ["resume", "autoNext", "store"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
   $("setAdd").onclick = addFiles;
+  $("setConvert").onclick = pickAndConvert;
+  $("kbpsSeg").querySelectorAll("[data-kbps]").forEach((b) => (b.onclick = () => {
+    settings.mp3kbps = +b.dataset.kbps; saveSettings();
+    $("kbpsSeg").querySelectorAll("[data-kbps]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
   $("setThumbs").onclick = () => { state.items.forEach((m) => { if (m.type === "video") { m.thumb = null; probeQueue.push(m); } }); runProbe(); toast("Küçük resimler yenileniyor…"); };
   $("setHistory").onclick = async () => {
     if (!(await sheet({ title: "Geçmişi temizle", text: "Son oynatılanlar ve kaldığınız yerler silinsin mi?", items: [{ label: "Temizle", value: 1, danger: true }], cancel: "Vazgeç" }))) return;
@@ -1233,6 +1260,188 @@ async function renderSettings() {
     if (est && $("usage")) $("usage").textContent = `${fmtSize(est.usage || 0)} kullanılıyor · yaklaşık ${fmtSize(est.quota || 0)} kullanılabilir`;
     else if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`;
   } catch { if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`; }
+}
+
+/* ================================================================ MP3 dönüştürme */
+/* Video ya da ses dosyasının sesi tarayıcıda çözülür (Web Audio) ve LAME ile MP3'e kodlanır.
+   Hiçbir dosya sunucuya gönderilmez. Sonuç kütüphanenin IndexedDB veritabanına kaydedilir. */
+const isMp3 = (m) => /\.mp3$/i.test(m.name) || m.blob?.type === "audio/mpeg";
+let lamePromise = null;
+function loadLame() {
+  if (window.lamejs) return Promise.resolve();
+  lamePromise ??= new Promise((res, rej) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js";
+    sc.onload = () => (window.lamejs ? res() : rej(new Error("lamejs")));
+    sc.onerror = () => { lamePromise = null; rej(new Error("lamejs")); };
+    document.head.appendChild(sc);
+  });
+  return lamePromise;
+}
+
+function progressSheet(title) {
+  const bg = document.createElement("div");
+  bg.className = "sheet-bg";
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-live="polite">
+    <h3>${esc(title)}</h3><p class="conv-name"></p>
+    <div class="conv-bar"><i></i></div>
+    <div class="conv-meta"><span class="conv-step">Hazırlanıyor…</span><span class="conv-pct">0%</span></div>
+    <button class="cancel">Vazgeç</button></div>`;
+  document.body.appendChild(bg);
+  const ctrl = new AbortController();
+  bg.querySelector(".cancel").onclick = () => ctrl.abort();
+  return {
+    signal: ctrl.signal,
+    set(name, step, frac) {
+      if (name != null) bg.querySelector(".conv-name").textContent = name;
+      if (step != null) bg.querySelector(".conv-step").textContent = step;
+      if (frac != null) {
+        const p = Math.round(Math.max(0, Math.min(1, frac)) * 100);
+        bg.querySelector(".conv-bar i").style.width = p + "%";
+        bg.querySelector(".conv-pct").textContent = p + "%";
+      }
+    },
+    close() { bg.remove(); },
+  };
+}
+
+async function decodeAudio(blob) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) throw new Error("Bu tarayıcı ses çözmeyi desteklemiyor.");
+  const ab = await blob.arrayBuffer();
+  const ctx = new AC();
+  try {
+    return await new Promise((res, rej) => {
+      const p = ctx.decodeAudioData(ab, res, rej);
+      if (p && typeof p.then === "function") p.then(res, rej);
+    });
+  } finally {
+    try { ctx.close(); } catch {}
+  }
+}
+
+async function encodeMp3(audio, kbps, onProgress, signal) {
+  const ch = Math.min(2, audio.numberOfChannels);
+  const enc = new lamejs.Mp3Encoder(ch, audio.sampleRate, kbps);
+  const L = audio.getChannelData(0), R = ch > 1 ? audio.getChannelData(1) : null;
+  const block = 1152 * 32, n = L.length, out = [];
+  const l16 = new Int16Array(block), r16 = new Int16Array(block);
+  const to16 = (s) => (s < 0 ? Math.max(-1, s) * 0x8000 : Math.min(1, s) * 0x7fff);
+  let lastYield = performance.now();
+  for (let i = 0; i < n; i += block) {
+    if (signal.aborted) throw new DOMException("İptal", "AbortError");
+    const len = Math.min(block, n - i);
+    for (let j = 0; j < len; j++) { l16[j] = to16(L[i + j]); if (R) r16[j] = to16(R[i + j]); }
+    const buf = R ? enc.encodeBuffer(l16.subarray(0, len), r16.subarray(0, len)) : enc.encodeBuffer(l16.subarray(0, len));
+    if (buf.length) out.push(new Uint8Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)));
+    if (performance.now() - lastYield > 60) {
+      onProgress(i / n);
+      await new Promise((r) => setTimeout(r, 0));
+      lastYield = performance.now();
+    }
+  }
+  const end = enc.flush();
+  if (end.length) out.push(new Uint8Array(end.buffer.slice(end.byteOffset, end.byteOffset + end.byteLength)));
+  return new Blob(out, { type: "audio/mpeg" });
+}
+
+function pickAndConvert() {
+  $("convertInput").value = "";
+  $("convertInput").click();
+}
+$("convertInput").addEventListener("change", (e) => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  convertItems(files.map((f) => ({
+    name: f.name, title: f.name.replace(/\.[^.]+$/, ""), artist: "", thumb: null,
+    type: f.type.startsWith("video/") || VIDEO_EXT.test(f.name) ? "video" : "audio", blob: f, size: f.size,
+  })));
+});
+
+async function convertItems(sources) {
+  const kbps = settings.mp3kbps || 192;
+  const big = sources.filter((m) => (m.size || m.blob?.size || 0) > 400 * 1024 * 1024);
+  if (big.length) {
+    const ok = await sheet({
+      title: "Büyük dosya",
+      text: `${big.map((m) => m.name).join(", ")} 400 MB'tan büyük. Telefonda dönüştürme uzun sürebilir ya da bellek yetmeyebilir. Yine de denensin mi?`,
+      items: [{ label: "Dönüştür", value: 1 }], cancel: "Vazgeç",
+    });
+    if (!ok) return;
+  }
+  const ui = progressSheet(sources.length > 1 ? `${sources.length} dosya MP3'e dönüştürülüyor` : "MP3'e dönüştürülüyor");
+  const made = [];
+  try {
+    ui.set(null, "Kodlayıcı yükleniyor…", 0);
+    await loadLame();
+    for (let k = 0; k < sources.length; k++) {
+      const src = sources[k];
+      const prefix = sources.length > 1 ? `${k + 1}/${sources.length} · ` : "";
+      ui.set(src.name, `${prefix}Ses çözülüyor…`, 0);
+      const blob = src.blob || (await blobOf(src));
+      if (!blob) { toast(`${src.name} bulunamadı, atlandı.`); continue; }
+      let audio;
+      try { audio = await decodeAudio(blob); }
+      catch { toast(`${src.name}: ses okunamadı. Bu biçim bu tarayıcıda desteklenmiyor olabilir.`, 4500); continue; }
+      ui.set(null, `${prefix}MP3 kodlanıyor (${kbps} kbps)…`, 0);
+      const mp3 = await encodeMp3(audio, kbps, (f) => ui.set(null, null, f), ui.signal);
+      ui.set(null, `${prefix}Veritabanına kaydediliyor…`, 1);
+      const base = (src.title || src.name.replace(/\.[^.]+$/, "")).trim() || "Dönüştürülen";
+      const m = {
+        id: `mp3-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+        name: `${base}.mp3`, title: base, artist: src.artist || "",
+        type: "audio", size: mp3.size, added: Date.now(), duration: audio.duration, width: 0, height: 0,
+        thumb: src.thumb || null, fav: false, lastPlayed: 0, pos: 0, plays: 0,
+        folder: "MP3 Dönüştürülenler", blob: mp3, converted: true, kbps,
+      };
+      let saved = false;
+      if (db) { try { await dbPutFile(m.id, mp3); await dbPutMeta(m); saved = true; } catch {} }
+      m.persisted = saved;
+      state.items = state.items.filter((x) => !x.sample);
+      state.items.push(m);
+      made.push(m);
+    }
+  } catch (err) {
+    ui.close();
+    if (err?.name === "AbortError") toast(made.length ? `İptal edildi. ${made.length} dosya dönüştürüldü.` : "Dönüştürme iptal edildi.");
+    else if (String(err?.message).includes("lamejs")) toast("MP3 kodlayıcı yüklenemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.", 4500);
+    else toast("Dönüştürme tamamlanamadı. Dosya çok büyük olabilir; daha kısa bir dosya deneyin.", 4500);
+    render();
+    return;
+  }
+  ui.close();
+  render();
+  if (!made.length) return;
+  const unsaved = made.filter((m) => !m.persisted).length;
+  const total = made.reduce((s, m) => s + m.size, 0);
+  const v = await sheet({
+    title: made.length > 1 ? `${made.length} MP3 hazır` : "MP3 hazır",
+    text: `${made.map((m) => m.name).join("\n")}\n\n${fmtSize(total)} · ${kbps} kbps\n` +
+      (unsaved ? "Depolama dolu olduğu için bu oturumdan sonra saklanmayacak." : "Kütüphane veritabanına kaydedildi: Klasörler › MP3 Dönüştürülenler"),
+    items: [
+      { label: "Çal", value: "play" },
+      ...(made.length === 1 ? [{ label: "Cihaza kaydet (indir)", value: "dl" }] : []),
+      { label: "Klasörü aç", value: "folder" },
+    ],
+  });
+  if (v === "play") { state.tab = "folders"; state.folder = "MP3 Dönüştürülenler"; render(); playFromList(made[0]); }
+  else if (v === "dl") downloadItem(made[0]);
+  else if (v === "folder") { state.tab = "folders"; state.folder = "MP3 Dönüştürülenler"; render(); }
+}
+
+async function downloadItem(m) {
+  const blob = await blobOf(m);
+  if (!blob) { toast("Dosya bulunamadı."); return; }
+  if (window.top !== window) {
+    toast("İndirme bu önizlemede kapalı. GitHub adresindeki sürümde (trocki59-byte.github.io/AuroraMediaPlayer) çalışır.", 5000);
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = m.name; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  toast(isIOS ? "Kaydetme penceresi açıldı. Dosya, Dosyalar › İndirilenler'e kaydedilir." : "İndirme başladı.");
 }
 
 /* ================================================================ örnek parça */
