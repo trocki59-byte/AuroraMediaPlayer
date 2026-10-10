@@ -332,6 +332,15 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .ext-link { color: var(--cyan); text-decoration: none; font-weight: 500; }
 .ext-link:hover { text-decoration: underline; }
 
+/* ---------- bağlı klasörler ---------- */
+.dirbar { display: flex; align-items: center; gap: 10px; margin: 0 12px 8px; padding: 10px 12px; border-radius: 14px; background: rgba(36,70,143,.35); border: 1px solid rgba(47,227,255,.45); font-size: 13px; }
+.dirbar span { flex: 1; min-width: 0; }
+.dir-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(17,28,70,.5); border: 1px solid var(--line-soft); }
+.dir-row > div { flex: 1; min-width: 0; }
+.dir-row b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dir-row small { color: var(--fg-2); font-size: 12px; }
+.dir-row .btn { padding: 8px 10px; }
+
 /* ---------- MP3 dönüştürme ---------- */
 .conv-bar { height: 8px; border-radius: 8px; background: rgba(255,255,255,.14); overflow: hidden; margin: 4px 12px 2px; }
 .conv-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--cyan)); border-radius: 8px; transition: width .2s ease; }
@@ -454,6 +463,10 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
         <label class="sr" for="searchInput">Ara</label>
         <input id="searchInput" type="search" placeholder="Video, müzik, sanatçı, klasör ara…" autocomplete="off">
       </div>
+      <div class="dirbar" id="dirBar" hidden>
+        <span id="dirBarText">Müzik klasörünüzde yeni şarkılar olabilir.</span>
+        <button class="add-btn" id="dirBarBtn">Tara</button>
+      </div>
       <div class="stats" id="stats" hidden>
         <button class="stat" data-tab="videos"><img class="ico" src="{{video_small}}" alt=""><span><b id="sVideo">0</b><small>Video</small></span></button>
         <button class="stat" data-tab="music"><img class="ico" src="{{note_small}}" alt=""><span><b id="sMusic">0</b><small>Müzik</small></span></button>
@@ -536,11 +549,12 @@ let db = null;
 function openDb() {
   return new Promise((res) => {
     try {
-      const r = indexedDB.open("aurora-media", 1);
+      const r = indexedDB.open("aurora-media", 2);
       r.onupgradeneeded = () => {
         const d = r.result;
         if (!d.objectStoreNames.contains("files")) d.createObjectStore("files");
         if (!d.objectStoreNames.contains("meta")) d.createObjectStore("meta", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("dirs")) d.createObjectStore("dirs", { keyPath: "id" });
       };
       r.onsuccess = () => res(r.result);
       r.onerror = () => res(null);
@@ -561,7 +575,7 @@ function tx(store, mode, fn) {
     } catch (e) { rej(e); }
   });
 }
-const dbPutMeta = (m) => tx("meta", "readwrite", (s) => { const c = { ...m }; delete c.blob; delete c.url; delete c.now; delete c.__fromDb; return s.put(c); }).catch(() => {});
+const dbPutMeta = (m) => tx("meta", "readwrite", (s) => { const c = { ...m }; delete c.blob; delete c.url; delete c.now; delete c.__fromDb; delete c.fh; return s.put(c); }).catch(() => {});
 const dbPutFile = (id, blob) => tx("files", "readwrite", (s) => s.put(blob, id));
 const dbGetFile = (id) => tx("files", "readonly", (s) => s.get(id)).catch(() => null);
 const dbAllMeta = () => tx("meta", "readonly", (s) => s.getAll()).catch(() => []);
@@ -829,6 +843,18 @@ async function runProbe() {
 }
 async function blobOf(m) {
   if (m.blob) return m.blob;
+  if (m.src === "dir") {
+    try {
+      if (!m.fh) {
+        const d = dirs.find((x) => x.id === m.dir);
+        if (!d || !(await ensurePerm(d, false))) return null;
+        m.fh = await fileByPath(d.handle, m.path);
+      }
+      const f = await m.fh.getFile();
+      m.blob = f; m.__fromDb = true;
+      return f;
+    } catch { m.fh = null; return null; }
+  }
   const b = await dbGetFile(m.id);
   if (b) { m.blob = b; m.__fromDb = true; }
   return b;
@@ -971,6 +997,11 @@ function load(m, autoplay) {
   // Dosya hafızadaysa hiç beklemeden başlat: kilitli ekranda şarkı geçişinin çalışması için şart
   if (m.blob) start(m, m.blob, autoplay);
   else blobOf(m).then((blob) => {
+    if (!blob && m.src === "dir") {
+      toast(`"${m.title}" klasörde bulunamadı, atlanıyor.`, 2500);
+      if (state.order.length > 1) { state.current = m; next(true); }
+      return;
+    }
     if (!blob) { toast(`"${m.title}" açılamadı. Dosya bu tarayıcıda bulunamadı; yeniden ekleyin.`, 4000); return; }
     start(m, blob, autoplay);
   });
@@ -1349,7 +1380,7 @@ async function itemMenu(m) {
   else if (v === "fav") toggleFav(m);
   else if (v === "info") showInfo(m);
   else if (v === "del") {
-    const ok = await sheet({ title: "Kütüphaneden kaldırılsın mı?", text: `"${m.title}" bu tarayıcıdan silinecek. Cihazınızdaki asıl dosya etkilenmez.`, items: [{ label: "Kaldır", value: "yes", danger: true }], cancel: "Vazgeç" });
+    const ok = await sheet({ title: "Kütüphaneden kaldırılsın mı?", text: m.src === "dir" ? `"${m.title}" listeden kaldırılacak. Dosya bağlı klasörde durduğu için sonraki taramada yeniden eklenir; tamamen çıkarmak için dosyayı klasörden taşıyın.` : `"${m.title}" bu tarayıcıdan silinecek. Cihazınızdaki asıl dosya etkilenmez.`, items: [{ label: "Kaldır", value: "yes", danger: true }], cancel: "Vazgeç" });
     if (ok) removeItem(m);
   }
 }
@@ -1363,16 +1394,20 @@ function removeItem(m) {
 }
 $("btnMenu").onclick = async () => {
   const items = [{ label: "Dosya ekle", value: "add" }, { label: "MP3'e dönüştür", value: "mp3" }];
-  if ("webkitdirectory" in $("folderInput") && !isIOS) items.push({ label: "Klasör ekle", value: "folder" });
+  if (fsSupported) items.push({ label: "Müzik klasörü bağla (otomatik tarama)", value: "link" });
+  if (dirs.length && fsSupported) items.push({ label: "Bağlı klasörleri şimdi tara", value: "scan" });
+  if ("webkitdirectory" in $("folderInput") && !isIOS) items.push({ label: "Klasör ekle (bir kerelik kopya)", value: "folder" });
   items.push({ label: "Sıralama", value: "sort" }, { label: "Oynatma sırası", value: "queue" }, { label: "Ayarlar", value: "settings" }, { label: "Hakkında", value: "about" });
   const v = await sheet({ title: "Aurora Media Player", items });
   if (v === "add") addFiles();
   else if (v === "mp3") pickAndConvert();
+  else if (v === "link") linkFolder();
+  else if (v === "scan") scanAll(true);
   else if (v === "folder") { $("folderInput").value = ""; $("folderInput").click(); }
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.4\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.5\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1386,6 +1421,14 @@ async function renderSettings() {
     <h4>OYNATMA</h4>
     ${sw("resume", "Kaldığım yerden devam et", "Dosyayı yeniden açtığınızda son konumdan başlar")}
     ${sw("autoNext", "Sonrakini otomatik oynat", "Dosya bitince listedeki sıradakine geçer")}
+    <h4>OTOMATİK KLASÖR TARAMA</h4>
+    ${fsSupported ? `
+      <div class="set" style="display:grid;gap:10px"><div><b>Bağlı müzik klasörleri</b><small>Aurora her açılışta ve pencereye döndüğünüzde bu klasörleri tarar, yeni MP3 ve videoları kendiliğinden ekler, silinenleri listeden çıkarır. Dosyalar kopyalanmaz, yerinden çalınır.</small></div>
+        <div style="display:grid;gap:6px">${dirs.length ? dirs.map((d) => `<div class="dir-row"><div><b>📁 ${esc(d.name)}</b><small>${d.count || 0} dosya${d.lastScan ? ` · son tarama ${new Date(d.lastScan).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}` : ""}</small></div><button class="btn" data-dirscan="${d.id}">Tara</button><button class="btn danger" data-dirdel="${d.id}">Kaldır</button></div>`).join("") : `<small>Henüz bağlı klasör yok.</small>`}</div>
+        <button class="add-btn" id="setLink" style="justify-self:start">+ Müzik klasörü bağla</button>
+        <small>Tarayıcı ilk seferde ve bazen açılışta "Dosyaları görüntüle" izni sorar. Chrome'da <b>Her ziyarette izin ver</b>'i seçerseniz bir daha sormaz.</small>
+      </div>` : `
+      <div class="set"><div><b>Bu tarayıcıda yok</b><small>Klasörü kendiliğinden tarama yalnızca bilgisayardaki Chrome ve Edge'de çalışır. iPhone ve Safari'de dosyaları + Ekle ile seçin; Android'de Aurora uygulaması (APK) telefonu zaten kendisi tarar.</small></div></div>`}
     <h4>KÜTÜPHANE</h4>
     ${sw("store", "Dosyaları bu tarayıcıda sakla", "Kapalıysa eklediğiniz dosyalar sayfa kapanınca listeden çıkar")}
     <div class="set"><div><b>Depolama</b><small id="usage">${usage}</small></div></div>
@@ -1416,13 +1459,16 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.4 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.5 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   $("ytKeySave").onclick = () => {
     settings.ytKey = $("ytKey").value.trim(); saveSettings();
     toast(settings.ytKey ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
   };
   ["resume", "autoNext", "store", "ytOnlyArtist"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
   $("setAdd").onclick = addFiles;
+  if ($("setLink")) $("setLink").onclick = linkFolder;
+  $("settings").querySelectorAll("[data-dirscan]").forEach((b) => (b.onclick = () => { const d = dirs.find((x) => x.id === b.dataset.dirscan); if (d) scanDir(d, true); }));
+  $("settings").querySelectorAll("[data-dirdel]").forEach((b) => (b.onclick = () => unlinkFolder(b.dataset.dirdel)));
   $("setConvert").onclick = pickAndConvert;
   $("kbpsSeg").querySelectorAll("[data-kbps]").forEach((b) => (b.onclick = () => {
     settings.mp3kbps = +b.dataset.kbps; saveSettings();
@@ -1447,6 +1493,169 @@ async function renderSettings() {
     else if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`;
   } catch { if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`; }
 }
+
+/* ================================================================ otomatik klasör tarama */
+/* Bilgisayarda (Chrome/Edge) bir müzik klasörü bağlanır; klasör tanıtıcısı veritabanında saklanır.
+   Aurora açıldığında ve pencereye dönüldüğünde klasör yeniden taranır: yeniler eklenir, silinenler çıkarılır.
+   Dosyalar kopyalanmaz, çalarken yerinden okunur. */
+const fsSupported = "showDirectoryPicker" in window && !(() => { try { return window.top !== window; } catch { return true; } })();
+let dirs = [];
+let scanning = false, lastAutoScan = 0;
+const dbAllDirs = () => tx("dirs", "readonly", (s) => s.getAll()).catch(() => []);
+const dbPutDir = (d) => tx("dirs", "readwrite", (s) => s.put({ id: d.id, name: d.name, handle: d.handle, count: d.count || 0, lastScan: d.lastScan || 0 })).catch(() => {});
+const dbDelDir = (id) => tx("dirs", "readwrite", (s) => s.delete(id)).catch(() => {});
+
+async function ensurePerm(d, ask) {
+  try {
+    const o = { mode: "read" };
+    let p = await d.handle.queryPermission(o);
+    if (p !== "granted" && ask) p = await d.handle.requestPermission(o);
+    return p === "granted";
+  } catch { return false; }
+}
+async function fileByPath(root, path) {
+  const parts = path.split("/");
+  let h = root;
+  for (const p of parts.slice(0, -1)) h = await h.getDirectoryHandle(p);
+  return h.getFileHandle(parts[parts.length - 1]);
+}
+async function walk(dir, path, out, depth) {
+  if (depth > 10) return;
+  for await (const [name, h] of dir.entries()) {
+    if (name.startsWith(".")) continue;
+    const p = path ? `${path}/${name}` : name;
+    if (h.kind === "directory") await walk(h, p, out, depth + 1);
+    else if (AUDIO_EXT.test(name) || VIDEO_EXT.test(name)) out.push({ path: p, name, handle: h });
+  }
+}
+
+async function linkFolder() {
+  if (!fsSupported) { toast("Bu tarayıcı klasör bağlamayı desteklemiyor. Bilgisayarda Chrome ya da Edge kullanın.", 4500); return; }
+  let handle;
+  try { handle = await window.showDirectoryPicker({ id: "aurora-muzik", mode: "read", startIn: "music" }); }
+  catch { return; } // vazgeçildi
+  for (const d of dirs) {
+    try { if (await d.handle.isSameEntry(handle)) { toast(`"${d.name}" zaten bağlı, yeniden taranıyor.`); await scanDir(d, true, true); return; } } catch {}
+  }
+  const d = { id: `d${Date.now().toString(36)}`, name: handle.name, handle, count: 0, lastScan: 0 };
+  dirs.push(d);
+  await dbPutDir(d);
+  await scanDir(d, true, true);
+  if (state.tab === "settings") render();
+}
+async function unlinkFolder(id) {
+  const d = dirs.find((x) => x.id === id);
+  if (!d) return;
+  const ok = await sheet({ title: `"${d.name}" bağlantısı kaldırılsın mı?`, text: "Bu klasördeki şarkılar Aurora'nın listesinden çıkar. Bilgisayardaki dosyalara dokunulmaz.", items: [{ label: "Bağlantıyı kaldır", value: 1, danger: true }], cancel: "Vazgeç" });
+  if (!ok) return;
+  const prefix = `dir:${id}:`;
+  state.items.filter((m) => m.id.startsWith(prefix)).forEach((m) => {
+    if (state.current === m) { media.pause(); state.current = null; updateNowPlaying(); }
+    tx("meta", "readwrite", (s) => s.delete(m.id)).catch(() => {});
+  });
+  state.items = state.items.filter((m) => !m.id.startsWith(prefix));
+  dirs = dirs.filter((x) => x !== d);
+  await dbDelDir(id);
+  updateDirBar(); render(); toast("Klasör bağlantısı kaldırıldı.");
+}
+
+/* playAfter: klasör ilk bağlandığında (kullanıcı dokunuşuyla) sırayla çalmaya başla */
+async function scanDir(d, interactive, playAfter = false) {
+  if (!(await ensurePerm(d, interactive))) { updateDirBar(true); return []; }
+  scanning = true;
+  if (interactive) toast(`"${d.name}" taranıyor…`, 1500);
+  const found = [];
+  try { await walk(d.handle, "", found, 0); }
+  catch { scanning = false; toast(`"${d.name}" okunamadı. Klasör taşınmış ya da silinmiş olabilir; yeniden bağlayın.`, 5000); return []; }
+  const prefix = `dir:${d.id}:`;
+  const existing = new Map(state.items.filter((m) => m.id.startsWith(prefix)).map((m) => [m.id, m]));
+  const seen = new Set(), added = [];
+  for (const f of found) {
+    const id = prefix + f.path;
+    seen.add(id);
+    let m = existing.get(id);
+    if (!m) {
+      let file = null;
+      try { file = await f.handle.getFile(); } catch { continue; }
+      const parts = f.path.split("/");
+      m = {
+        id, name: f.name, title: f.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " "), artist: "",
+        type: VIDEO_EXT.test(f.name) ? "video" : "audio", size: file.size, added: file.lastModified || Date.now(),
+        duration: 0, width: 0, height: 0, thumb: null, fav: false, lastPlayed: 0, pos: 0, plays: 0,
+        folder: parts.length > 1 ? parts[parts.length - 2] : d.name, src: "dir", dir: d.id, path: f.path, persisted: true,
+      };
+      state.items.push(m);
+      added.push(m);
+      dbPutMeta(m);
+    }
+    m.fh = f.handle;
+  }
+  const removed = [...existing.values()].filter((m) => !seen.has(m.id));
+  for (const m of removed) {
+    if (state.current === m) continue; // çalan şarkıyı yarıda kesme
+    state.items = state.items.filter((x) => x !== m);
+    tx("meta", "readwrite", (s) => s.delete(m.id)).catch(() => {});
+  }
+  // Silinen dosyaları çalma sırasından da çıkar
+  if (removed.length && state.queue.length) {
+    const cur = state.current;
+    const gone = new Set(removed.filter((m) => m !== cur));
+    const keepOrder = state.order.map((i) => state.queue[i]).filter((m) => m && !gone.has(m));
+    state.queue = keepOrder;
+    state.order = keepOrder.map((_, i) => i);
+    state.pos = Math.max(0, keepOrder.indexOf(cur));
+  }
+  d.count = found.length; d.lastScan = Date.now();
+  await dbPutDir(d);
+  scanning = false;
+  if (added.length) {
+    const wasSample = state.current?.sample;
+    state.items = state.items.filter((x) => !x.sample);
+    if (wasSample) { media.pause(); state.current = null; }
+  }
+  probeQueue.push(...added);
+  runProbe();
+  updateDirBar();
+  render();
+
+  // Sıra: klasör ve dosya adına göre (albüm sırası korunur)
+  const music = state.items.filter((m) => m.id.startsWith(prefix) && m.type === "audio").sort((a, b) => trCmp.compare(a.path, b.path));
+  if (playAfter && music.length) {
+    state.tab = "folders"; state.folder = null;
+    state.queue = music; rebuildOrder(0);
+    load(music[0], true);
+    toast(`${found.length} dosya bulundu. ${music.length} şarkı sırayla çalıyor.`, 3500);
+  } else if (!state.current && music.length) {
+    state.queue = music; rebuildOrder(0);
+    load(music[0], false);
+  } else if (added.length) {
+    toast(`"${d.name}": ${added.length} yeni dosya bulundu ve eklendi.`, 3000);
+    // Sıra çalıyorsa yeni şarkıları sıranın sonuna ekle
+    const newMusic = added.filter((m) => m.type === "audio" && state.current?.type === "audio");
+    newMusic.forEach((m) => { if (!state.queue.includes(m)) { state.queue.push(m); state.order.push(state.queue.length - 1); } });
+  } else if (interactive) {
+    toast(`"${d.name}": yeni dosya yok (${found.length} dosya).`, 2200);
+  }
+  return added;
+}
+async function scanAll(interactive) {
+  if (!fsSupported || scanning || !dirs.length) return;
+  lastAutoScan = Date.now();
+  for (const d of dirs) await scanDir(d, interactive);
+}
+async function updateDirBar(needPerm) {
+  if (!fsSupported || !dirs.length) { $("dirBar").hidden = true; return; }
+  if (needPerm === undefined) {
+    needPerm = false;
+    for (const d of dirs) if (!(await ensurePerm(d, false))) needPerm = true;
+  }
+  $("dirBar").hidden = !needPerm;
+  $("dirBarText").textContent = dirs.length > 1 ? "Bağlı müzik klasörlerinizi taramak için izin verin." : `"${dirs[0].name}" klasörünü taramak için izin verin.`;
+}
+$("dirBarBtn").onclick = () => scanAll(true);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && fsSupported && dirs.length && Date.now() - lastAutoScan > 120000) scanAll(false);
+});
 
 /* ================================================================ YouTube Müzik */
 /* Arama: YouTube Data API v3 (anahtar yalnızca bu cihazda saklanır). Çalma: YouTube'un resmi gömülü oynatıcısı.
@@ -1830,5 +2039,10 @@ function makeSample() {
   if (last) prepare(last, state.items.filter((m) => m.type === last.type));
   probeQueue.push(...state.items.filter((m) => !m.sample && (!m.duration || (m.type === "video" && !m.thumb))));
   runProbe();
+
+  if (fsSupported) {
+    dirs = (await dbAllDirs()) || [];
+    if (dirs.length) { await updateDirBar(); scanAll(false); }
+  }
 })();
 </script>
