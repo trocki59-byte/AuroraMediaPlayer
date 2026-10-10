@@ -1,0 +1,73 @@
+# Aurora Media Player — Windows masaüstü programı (.exe)
+# Masaüstü dosyaları ya da web sürümü değişince kendiliğinden derlenir,
+# kurulum ve taşınabilir .exe dosyaları GitHub "Releases" sayfasında yayınlanır.
+name: Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ "desktop/**", ".github/workflows/windows.yml" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Gömülü (internetsiz) kopyayı hazırla
+        shell: bash
+        run: |
+          mkdir -p desktop/offline
+          cp docs/index.html docs/manifest.webmanifest docs/icon-*.png desktop/offline/
+
+      - name: Paketleri kur
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+
+      - name: EXE derle
+        working-directory: desktop
+        shell: bash
+        run: |
+          set -o pipefail
+          npx electron-builder --win --x64 --publish never 2>&1 | tee build.log || {
+            grep -iE "error|⨯" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuroraMediaPlayer-windows
+          path: desktop/dist/*.exe
+
+      - name: GitHub sürümünde yayınla
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="windows-v$(node -p "require('./desktop/package.json').version")"
+          if ! gh release view "$VER" >/dev/null 2>&1; then
+            gh release create "$VER" --target "$GITHUB_SHA" \
+              --title "TROÇKİ® AURORA MEDIA PLAYER — Windows ${VER#windows-v}" \
+              --notes "Sen İzle, Dünya Güzelleşsin…
+
+          **Kurulum:** AuroraMediaPlayer-Kurulum dosyasını indirip çalıştırın. Masaüstüne ve Başlat menüsüne kısayol eklenir.
+          **Kurulumsuz:** AuroraMediaPlayer-Tasinabilir dosyası kurulum gerektirmez, USB bellekten de çalışır.
+
+          Windows ilk açılışta 'Windows kişisel bilgisayarınızı korudu' derse **Ek bilgi › Yine de çalıştır**'a tıklayın (program dijital imzalı olmadığı için).
+
+          - Program açılışta en güncel sürümü yükler; internet yoksa içindeki kopyayla açılır.
+          - Müzik klasörü bağlama ve otomatik tarama, YouTube Müzik, Popüler Mix, MP3 dönüştürme.
+          - F11 tam ekran · F5 yenile
+
+          © TROÇKİ® Software — Düşün • Keşfet • Üret • Paylaş"
+          fi
+          gh release upload "$VER" desktop/dist/*.exe --clobber
