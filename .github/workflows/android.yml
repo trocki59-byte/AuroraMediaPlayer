@@ -7,6 +7,10 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -40,3 +44,23 @@ jobs:
         with:
           name: AuroraMediaPlayer-apk
           path: cikti/*-Signed.apk
+
+      # v1.0.0 gibi bir etiket gönderildiğinde: GitHub "Releases" sayfasında APK'yı yayınla
+      - name: Sürümü yayınla
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp cikti/*-Signed.apk "AuroraMediaPlayer-${GITHUB_REF_NAME}.apk"
+          gh release create "$GITHUB_REF_NAME" "AuroraMediaPlayer-${GITHUB_REF_NAME}.apk" \
+            --title "TROÇKİ® AURORA MEDIA PLAYER ${GITHUB_REF_NAME}" \
+            --notes "Sen İzle, Dünya Güzelleşsin…
+
+          **Android kurulumu:** APK dosyasını telefona indirip açın. İlk kez kuruyorsanız 'Bilinmeyen kaynaklardan yükleme' iznini verin.
+
+          - Videolar, Müzikler, Klasörler, Favoriler, Son Oynatılanlar
+          - Kaldığı yerden devam, karıştır/tekrar, hız, tam ekran, arka planda çalma
+          - Android 8.0 ve üzeri
+
+          © TROÇKİ® Software — Düşün • Keşfet • Üret • Paylaş"

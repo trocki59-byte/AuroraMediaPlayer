@@ -42,6 +42,7 @@ jobs:
       - name: Xcode ve .NET sürümleri
         run: |
           xcodebuild -version
+          echo "::notice::$(xcodebuild -version | head -1) / iOS iş yükü: $(dotnet workload list | grep -i ios | head -1)"
           dotnet --info | head -30
           dotnet workload list
 
@@ -50,7 +51,7 @@ jobs:
         run: |
           set -o pipefail
           dotnet build AuroraMediaPlayer.csproj -f net10.0-ios -c Debug -p:AuroraTarget=ios \
-            -p:RuntimeIdentifier=iossimulator-arm64 -p:ValidateXcodeVersion=false 2>&1 | tee build.log || {
+            -p:RuntimeIdentifier=iossimulator-arm64 -p:ValidateXcodeVersion=false -p:MtouchLink=SdkOnly 2>&1 | tee build.log || {
             # Hata satırlarını GitHub özetine taşı (log indirmeden görülebilsin)
             grep -E "error|Error|ERROR" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
