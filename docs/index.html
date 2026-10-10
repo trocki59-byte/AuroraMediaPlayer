@@ -347,6 +347,24 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .ext-link { color: var(--cyan); text-decoration: none; font-weight: 500; }
 .ext-link:hover { text-decoration: underline; }
 
+/* ---------- ekolayzer ---------- */
+.eq-btn { height: 34px; padding: 0 10px; border-radius: 17px; font-weight: 700; font-size: 12px; letter-spacing: .06em; border: 1.5px solid var(--line); background: rgba(17,28,70,.6); }
+.eq-btn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 12px rgba(47,227,255,.45); }
+.eq-panel { width: min(560px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; }
+.eq-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 12px 4px; }
+.eq-head h3 { margin: 0; }
+.eq-curve { display: block; width: calc(100% - 24px); height: 110px; margin: 6px 12px; border-radius: 12px; background: rgba(5,8,22,.6); border: 1px solid var(--line-soft); }
+.eq-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 12px 8px; }
+.eq-presets button { padding: 7px 12px !important; border-radius: 15px !important; font-size: 12px; background: rgba(17,28,70,.6); border: 1px solid rgba(91,140,255,.3) !important; text-align: center !important; }
+.eq-presets button[aria-pressed="true"] { border-color: var(--cyan) !important; color: var(--cyan); background: rgba(36,70,143,.5); }
+.eq-rows { display: grid; gap: 2px; margin: 0 12px 6px; }
+.eq-row { display: grid; grid-template-columns: 58px 1fr 52px; align-items: center; gap: 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.eq-row label { color: var(--fg-2); }
+.eq-row output { text-align: right; font-weight: 500; }
+.eq-row.bass label, .eq-row.bass output { color: var(--cyan); font-weight: 600; }
+.eq-row input[type="range"] { --p: 50%; }
+.eq-note { margin: 4px 12px 8px; color: var(--fg-2); font-size: 12px; line-height: 1.5; }
+
 /* ---------- bağlı klasörler ---------- */
 .dirbar { display: flex; align-items: center; gap: 10px; margin: 0 12px 8px; padding: 10px 12px; border-radius: 14px; background: rgba(36,70,143,.35); border: 1px solid rgba(47,227,255,.45); font-size: 13px; }
 .dirbar span { flex: 1; min-width: 0; }
@@ -464,6 +482,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
             <input type="range" id="vol" min="0" max="100" value="80">
             <span class="vol-val" id="volVal">80</span>
           </div>
+          <button class="eq-btn" id="btnEq" aria-label="Ekolayzer" aria-pressed="false">EQ</button>
           <button class="icon-btn" id="btnCast" aria-label="Ekrana yansıt (AirPlay)"><img class="ico" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAC50lEQVR42u2au27UQBSGv+PdhAASAgQPECjoECBRIiQaBBWvgICGDgnxAhS0VFTAC9BQgmhpuDQpkJBSJAUtipSGDaz9U2SGWJG9XsM4scn5pdV6L17P+eZcZn0GXC6Xy+VyHVTZrA8lGZABxUDtywCZWfvxB+P/C0nKWnmAJDMzSToNPAAuzuMxfbI5jPUr8NTM1qNNjQBKM38SeFcyfqhaA67VQRhXnDAys6mke8H4LWAh5IFiQLGfAb+AZeARcD+8lzcBiITOBYNHpR8cmsbBhrPhdVH1hTpNdxH7BrwNYaMeV7UpcDVMoMIEFrMINSXIaOyKmd0dSNZ/VvLgmcl73OJ3FySNeu4Bo+Cxh9rEyNxgzSyvKyc9mXnCGOce3xATW/Jy4QAcgANwAA7AATgAB+AAHIADcAAOwAE4AAfgAA6S2twTtNA1sha33PZaf8bYBYA83AztrfWS8tDTnKYEEGlelvSm7y4tKQfOzxvi44b8UJQAnAKuDyzEbZcNrQB8BG6z3WiILpWiOTpqCrVEhhs7TZLPpUnNq9y77ELxvSPAK+DGwBP9J+Am8B1gd1OnaYPEInAHuESazREZcAs4wc4mBkrHG8Br0rXhvwAvzGyzdUerqy0ykla0rVw7iscrHV2zfQ4IHmAhZpUgJgUsNuSdsaTDwE/SNGGtVL7bl8Fw4jTFDASgeYNRCgPesybsuANXs5oVmuZcemdhV5fVdXn/attb1wBKMzZr1iaSZg2+MLNJi2v1B0Bw8TPA0YosHuN5AViqqEDxeEnSBbY3N1XlAAO2zGy1T0tPC8+PJf2QNJG0NeNRqF5Fw7mT8HguaTFFpbJEyW0ZWJ1jlZdSV8zsvaSRmeX7FQLRTY+V3PafwTYohtfxPuSAGKObIb734gZL9LKNfQcQF0tmtibpCfCw9Eekk5QTnl8CH8K1833LARU5oa4KpFIGTHpVBbr+79D1tayDgXUOIuVK0OVyuVwHWb8BUgmxywHUMDUAAAAASUVORK5CYII=" alt=""></button>
           <button class="icon-btn" id="btnFull" aria-label="Tam ekran"><img class="ico" id="fullIco" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADYElEQVR42u2bzWoUQRDHfzUzJsSAL6AH0YAHbx5ED6L4ADl4igiKJzHvIeQJvBoUQTwo+ABCPAUPOelBouJFHyAQl+julIetcZtxdrZ7xv3K9h+G2Y+Z7qp/V1dX9dRARETEIkPq/lRVAVJAW/SRi0ij+1U1AZKWOvYa9W/KHwvU6SLDbhARVdXTwF3gfJORBzJgW0TeqWoiIrnvyItIrqqXgFvAr1HWWoEEOABeiMj3QidvtlT1jKrua3tsWntZwIhldt78D/3v20BWWkLV/ErtfAdYA46AboOjuK/Twno7pbaayLAG3C/p9hd1o3LSzDh1rssDHKI4x6Qde1qaiucK4wohoGcWko+wmGEohFhuocyKyZi1aCMxXSqReS6RuTX0GngDnCgRUzmVrf0dp40QBwqwCzzydIKJTZmrwHqpP2lCABUE7IrIdiO79FwB3GtFZA/YC1zyNowAr6kaalqr5qEzczLjC0TCA6FCplMhfYQSkItIV1URke7YvVnfEnxjB0y2XqiDWGhEAiIBkYBIQCRgkZGNiP56ThwtgeHs1PY/HLl1lNx1BKxaQpOWfpt1LFfIvRJCQMHWS+Cb5dRFw+8bJDaTQiHTW+CBhcVqcn+cYbmnCwlMRPKQrG4qDmCwkz1XckdERERERERERMx6KNx4j3+CofBchvCzYwFOccQ14KKlw2Kp846IfAopdpjkyDtFFZfLabyI7HnJraqpnZ9VFBs8tP+yGTT9oqhiq0LurWFy1ynSob+t1GXwzP1oDqz60JG70PFw2MV1BCQMKsQKAuahcMqVG/uc1F280IgERAIiAZGASMAiIzSiS4siKVXvnKhxIjJkj3+oLiZTMk4CDqw4qjuJ0bHM07evrpF2OA4Cigjwtqqepf+w0adQcgl45Z2I/JvYXACuO+H4qOn8G7jifM/bEKAVvmLdjhD8oF/s6CVQSfibwOMW/i2v0MWbgLRC4B7+xdI9a6NNtfgRg2f9aYC1un4gr7s3qzH3r45ZTS3LLR2+9+TOIGTAzxACioqQJ8A9+vX2bVaYlRYEtK0Wz4DPwPOSbsMJsN0gsddMbgAb9Otv8wajt0S/4huaVYt/sIHoNoxZvgBPg16ZKa3BxwLBL001DETGFQi1iVaFOdjJjoiImB7+AEv5JZE8tGVwAAAAAElFTkSuQmCC" alt=""></button>
         </div>
@@ -557,7 +576,7 @@ function sheet({ title, text, items = [], cancel = "Kapat" }) {
 /* ================================================================ ayarlar (cihazda) */
 const SKEY = "aurora.settings.v1";
 const settings = Object.assign(
-  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192, ytKey: "", ytRecent: [], ytOnlyArtist: true },
+  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192, ytKey: "", ytRecent: [], ytOnlyArtist: true, eqOn: false, eqGains: [0,0,0,0,0,0,0,0,0,0], eqBass: 0, eqPreset: "Düz" },
   (() => { try { return JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch { return {}; } })()
 );
 const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* depolama kapalı */ } };
@@ -1344,6 +1363,7 @@ if ("mediaSession" in navigator) {
 /* ================================================================ menüler */
 async function playerMenu() {
   const v = await sheet({ title: "Oynatıcı", items: [
+    { label: `Ekolayzer${settings.eqOn ? " (açık)" : ""}`, value: "eq" },
     { label: `Oynatma hızı (${settings.speed}x)`, value: "speed" },
     { label: { off: "Tekrar: kapalı", all: "Tekrar: tümü", one: "Tekrar: tek parça" }[settings.repeat], value: "repeat" },
     { label: "Medya bilgisi", value: "info" },
@@ -1351,6 +1371,7 @@ async function playerMenu() {
     ...(state.current && state.current.type !== "youtube" && !isMp3(state.current) ? [{ label: "MP3'e dönüştür", value: "mp3" }] : []),
     { label: "Durdur", value: "stop" },
   ] });
+  if (v === "eq") { openEq(); return; }
   if (v === "speed") {
     const s = await sheet({ title: "Oynatma hızı", items: [0.5, 0.75, 1, 1.25, 1.5, 2].map((x) => ({ label: x === 1 ? "1x (Normal)" : `${x}x`, value: String(x) })) });
     if (s) { settings.speed = +s; media.playbackRate = settings.speed; saveSettings(); }
@@ -1425,7 +1446,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.6\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.7\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1477,7 +1498,7 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.6 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.7 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   $("ytKeySave").onclick = () => {
     settings.ytKey = $("ytKey").value.trim(); saveSettings();
     toast(settings.ytKey ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
@@ -1510,6 +1531,176 @@ async function renderSettings() {
     if (est && $("usage")) $("usage").textContent = `${fmtSize(est.usage || 0)} kullanılıyor · yaklaşık ${fmtSize(est.quota || 0)} kullanılabilir`;
     else if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`;
   } catch { if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`; }
+}
+
+/* ================================================================ ekolayzer */
+/* Web Audio: ses/video öğesi → ön kazanç → 10 bant → bas güçlendirme → sınırlayıcı → hoparlör.
+   Öğe bir kez bu zincire bağlanınca sesi yalnızca buradan çıkar; bu yüzden zincir ancak ekolayzer açılınca kurulur. */
+const EQ_FREQS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+const EQ_LABELS = ["32 Hz", "64 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"];
+const EQ_PRESETS = {
+  "Düz": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  "Bas Güçlendir": [6, 5, 4, 2, 0, 0, 0, 0, 0, 0],
+  "Süper Bas": [10, 9, 7, 4, 1, 0, 0, 0, 1, 1],
+  "Vokal": [-2, -1, 0, 2, 4, 4, 3, 1, 0, -1],
+  "Rock": [5, 4, 2, 0, -1, 0, 2, 3, 4, 4],
+  "Pop": [-1, 1, 3, 4, 3, 0, -1, -1, 0, 1],
+  "Elektronik": [7, 6, 2, 0, -2, 0, 1, 3, 5, 6],
+  "Halk / Bağlama": [2, 2, 1, 0, 1, 3, 4, 3, 2, 1],
+  "Klasik": [4, 3, 2, 1, 0, 0, 0, 2, 3, 4],
+  "Tiz Güçlendir": [0, 0, 0, 0, 0, 1, 3, 5, 6, 7],
+};
+const eq = { ctx: null, pre: null, bands: [], bass: null, comp: null, sources: new Map() };
+const dbToGain = (db) => Math.pow(10, db / 20);
+
+function eqBuild() {
+  if (eq.ctx) return true;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return false;
+  const ctx = new AC();
+  eq.ctx = ctx;
+  eq.pre = ctx.createGain();
+  eq.bands = EQ_FREQS.map((f, i) => {
+    const b = ctx.createBiquadFilter();
+    b.type = i === 0 ? "lowshelf" : i === EQ_FREQS.length - 1 ? "highshelf" : "peaking";
+    b.frequency.value = f; b.Q.value = 1.1; b.gain.value = 0;
+    return b;
+  });
+  eq.bass = ctx.createBiquadFilter();
+  eq.bass.type = "lowshelf"; eq.bass.frequency.value = 90; eq.bass.gain.value = 0;
+  eq.comp = ctx.createDynamicsCompressor();
+  eq.comp.threshold.value = -2; eq.comp.knee.value = 4; eq.comp.ratio.value = 12;
+  eq.comp.attack.value = 0.003; eq.comp.release.value = 0.2;
+  let node = eq.pre;
+  for (const b of eq.bands) { node.connect(b); node = b; }
+  node.connect(eq.bass); eq.bass.connect(eq.comp); eq.comp.connect(ctx.destination);
+  return true;
+}
+function eqAttach() {
+  if (!eqBuild()) return false;
+  for (const el of [audioEl, video]) {
+    if (eq.sources.has(el)) continue;
+    try { const src = eq.ctx.createMediaElementSource(el); src.connect(eq.pre); eq.sources.set(el, src); } catch {}
+  }
+  return true;
+}
+function eqApply() {
+  if (!eq.ctx) return;
+  const on = settings.eqOn;
+  const t = eq.ctx.currentTime;
+  eq.bands.forEach((b, i) => b.gain.setTargetAtTime(on ? settings.eqGains[i] : 0, t, 0.03));
+  eq.bass.gain.setTargetAtTime(on ? settings.eqBass : 0, t, 0.03);
+  // Bozulmayı önlemek için en büyük yükseltmenin bir kısmı kadar sesi önden kıs; kalanını sınırlayıcı tutar
+  const peak = on ? Math.max(0, ...settings.eqGains, 0) + Math.max(0, settings.eqBass) * 0.8 : 0;
+  eq.pre.gain.setTargetAtTime(dbToGain(-Math.min(12, peak * 0.55)), t, 0.03);
+}
+function eqResume() { if (eq.ctx && eq.ctx.state !== "running") eq.ctx.resume().catch(() => {}); }
+// iPhone ve tarayıcılar ses motorunu ancak bir dokunuştan sonra başlatır
+["pointerdown", "touchend", "keydown"].forEach((ev) => document.addEventListener(ev, () => {
+  if (settings.eqOn && !eq.sources.size) { eqAttach(); eqApply(); }
+  eqResume();
+}, { capture: true, passive: true }));
+document.addEventListener("visibilitychange", () => { if (!document.hidden) eqResume(); });
+
+function updateEqButton() {
+  $("btnEq").setAttribute("aria-pressed", String(!!settings.eqOn));
+  $("btnEq").title = settings.eqOn ? `Ekolayzer: ${settings.eqPreset}` : "Ekolayzer kapalı";
+}
+$("btnEq").onclick = openEq;
+
+function openEq() {
+  eqBuild(); eqResume();
+  const bg = document.createElement("div");
+  bg.className = "sheet-bg";
+  const rows = EQ_FREQS.map((f, i) => `
+    <div class="eq-row"><label for="eqb${i}">${EQ_LABELS[i]}</label>
+      <input type="range" id="eqb${i}" min="-12" max="12" step="1" value="${settings.eqGains[i]}">
+      <output id="eqo${i}">${settings.eqGains[i] > 0 ? "+" : ""}${settings.eqGains[i]} dB</output></div>`).join("");
+  bg.innerHTML = `<div class="sheet eq-panel" role="dialog" aria-modal="true" aria-label="Ekolayzer">
+    <div class="eq-head"><h3>Ekolayzer</h3>
+      <label class="switch"><input type="checkbox" id="eqOn" ${settings.eqOn ? "checked" : ""} aria-label="Ekolayzeri aç"><i></i></label></div>
+    <canvas class="eq-curve" id="eqCurve" width="1040" height="220" aria-hidden="true"></canvas>
+    <div class="eq-presets" id="eqPresets">${Object.keys(EQ_PRESETS).map((p) => `<button data-preset="${esc(p)}" aria-pressed="${settings.eqPreset === p}">${esc(p)}</button>`).join("")}</div>
+    <div class="eq-rows">
+      <div class="eq-row bass"><label for="eqBass">BAS</label>
+        <input type="range" id="eqBass" min="0" max="15" step="1" value="${settings.eqBass}">
+        <output id="eqBassO">+${settings.eqBass} dB</output></div>
+      ${rows}
+    </div>
+    <p class="eq-note">${isIOS ? "iPhone'da ekolayzer açıkken ekran kilitlenince müzik durabilir. Böyle olursa ekolayzeri kapatıp Aurora'yı yeniden açın. " : ""}Ekolayzer kendi müzik ve videolarınızda çalışır; YouTube şarkılarına uygulanamaz.</p>
+    <button class="cancel" id="eqClose">Kapat</button></div>`;
+  document.body.appendChild(bg);
+
+  const setRange2 = (el) => { const min = +el.min, max = +el.max; el.style.setProperty("--p", `${((el.value - min) / (max - min)) * 100}%`); };
+  const panel = bg.querySelector(".eq-panel");
+  panel.querySelectorAll("input[type=range]").forEach(setRange2);
+
+  const drawCurve = () => {
+    const c = panel.querySelector("#eqCurve"), g = c.getContext("2d");
+    const W = c.width, H = c.height, mid = H / 2, scale = H / 2 / 18;
+    g.clearRect(0, 0, W, H);
+    g.strokeStyle = "rgba(255,255,255,.08)"; g.lineWidth = 2;
+    for (const db of [-12, -6, 0, 6, 12]) { const y = mid - db * scale; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    const N = 260, freqs = new Float32Array(N), mag = new Float32Array(N), ph = new Float32Array(N), total = new Float32Array(N);
+    for (let i = 0; i < N; i++) freqs[i] = 20 * Math.pow(1000, i / (N - 1));
+    if (eq.ctx && settings.eqOn) {
+      const tmp = eq.ctx.createBiquadFilter();
+      const add = (type, f, q, gain) => { tmp.type = type; tmp.frequency.value = f; tmp.Q.value = q; tmp.gain.value = gain; tmp.getFrequencyResponse(freqs, mag, ph); for (let i = 0; i < N; i++) total[i] += 20 * Math.log10(mag[i]); };
+      EQ_FREQS.forEach((f, i) => add(i === 0 ? "lowshelf" : i === 9 ? "highshelf" : "peaking", f, 1.1, settings.eqGains[i]));
+      add("lowshelf", 90, 1, settings.eqBass);
+    }
+    const grad = g.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, "#b04bff"); grad.addColorStop(0.5, "#3b7bff"); grad.addColorStop(1, "#2fe3ff");
+    g.beginPath();
+    for (let i = 0; i < N; i++) { const x = (i / (N - 1)) * W, y = mid - Math.max(-18, Math.min(18, total[i])) * scale; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.strokeStyle = grad; g.lineWidth = 5; g.shadowColor = "#2fe3ff"; g.shadowBlur = 14; g.stroke(); g.shadowBlur = 0;
+    g.lineTo(W, H); g.lineTo(0, H); g.closePath();
+    const fill = g.createLinearGradient(0, 0, 0, H); fill.addColorStop(0, "rgba(47,227,255,.22)"); fill.addColorStop(1, "rgba(47,227,255,0)");
+    g.fillStyle = fill; g.fill();
+  };
+  const commit = () => { saveSettings(); eqApply(); updateEqButton(); drawCurve(); };
+  const turnOn = () => {
+    if (!settings.eqOn) { settings.eqOn = true; panel.querySelector("#eqOn").checked = true; }
+    if (!eqAttach()) toast("Bu tarayıcı ekolayzeri desteklemiyor.");
+    eqResume();
+  };
+
+  panel.querySelector("#eqOn").onchange = (e) => {
+    settings.eqOn = e.target.checked;
+    if (settings.eqOn) turnOn();
+    commit();
+    if (!settings.eqOn && isIOS && eq.sources.size) toast("Ekolayzer kapatıldı. Ekran kilitliyken çalma sorunu yaşıyorsanız Aurora'yı kapatıp yeniden açın.", 4500);
+  };
+  panel.querySelectorAll("[data-preset]").forEach((b) => (b.onclick = () => {
+    const p = b.dataset.preset;
+    settings.eqPreset = p; settings.eqGains = [...EQ_PRESETS[p]];
+    if (p === "Süper Bas" && settings.eqBass < 4) settings.eqBass = 4;
+    if (p === "Düz") settings.eqBass = 0;
+    EQ_FREQS.forEach((_, i) => { const el = panel.querySelector(`#eqb${i}`); el.value = settings.eqGains[i]; setRange2(el); panel.querySelector(`#eqo${i}`).textContent = `${settings.eqGains[i] > 0 ? "+" : ""}${settings.eqGains[i]} dB`; });
+    const bEl = panel.querySelector("#eqBass"); bEl.value = settings.eqBass; setRange2(bEl); panel.querySelector("#eqBassO").textContent = `+${settings.eqBass} dB`;
+    panel.querySelectorAll("[data-preset]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    turnOn(); commit();
+  }));
+  EQ_FREQS.forEach((_, i) => {
+    const el = panel.querySelector(`#eqb${i}`);
+    el.oninput = () => {
+      settings.eqGains[i] = +el.value; setRange2(el);
+      panel.querySelector(`#eqo${i}`).textContent = `${el.value > 0 ? "+" : ""}${el.value} dB`;
+      settings.eqPreset = "Özel"; panel.querySelectorAll("[data-preset]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+      turnOn(); commit();
+    };
+  });
+  panel.querySelector("#eqBass").oninput = (e) => {
+    settings.eqBass = +e.target.value; setRange2(e.target);
+    panel.querySelector("#eqBassO").textContent = `+${settings.eqBass} dB`;
+    turnOn(); commit();
+  };
+  const close = () => { bg.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  panel.querySelector("#eqClose").onclick = close;
+  bg.addEventListener("click", (e) => { if (e.target === bg) close(); });
+  drawCurve();
 }
 
 /* ================================================================ otomatik klasör tarama */
@@ -2047,6 +2238,7 @@ function makeSample() {
   video.volume = audioEl.volume = settings.volume / 100;
   if (isIOS) $("vol").parentElement.querySelectorAll("input, .vol-val").forEach((el) => (el.hidden = true));
   updateModes();
+  updateEqButton();
   try { const t = localStorage.getItem("aurora.tab"); if (t && TABS.some(([k]) => k === t)) state.tab = t; } catch {}
 
   db = await openDb();
