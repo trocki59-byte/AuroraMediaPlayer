@@ -322,6 +322,11 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
   background: rgba(17,28,70,.55); border: 1px solid var(--line); outline: none;
 }
 .yt-form input::placeholder { color: var(--fg-3); }
+.yt-opts { display: grid; gap: 8px; }
+.yt-opt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.yt-opt > span { color: var(--fg-2); font-size: 12px; min-width: 92px; }
+.yt-opt .seg { flex: 1; min-width: 0; }
+.yt-hot { justify-content: center; text-decoration: none; color: var(--fg); padding: 12px 16px; font-size: 14px; }
 .yt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .yt-chips button { padding: 6px 12px; border-radius: 15px; font-size: 12px; background: rgba(17,28,70,.6); border: 1px solid rgba(91,140,255,.3); }
 .yt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -539,7 +544,7 @@ function sheet({ title, text, items = [], cancel = "Kapat" }) {
 /* ================================================================ ayarlar (cihazda) */
 const SKEY = "aurora.settings.v1";
 const settings = Object.assign(
-  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192, ytKey: "", ytRecent: [], ytOnlyArtist: true, },
+  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192, ytKey: "", ytRecent: [], ytOnlyArtist: true, ytOrder: "viewCount", ytPerArtist: 5, },
   (() => { try { return JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch { return {}; } })()
 );
 const saveSettings = () => {
@@ -683,7 +688,7 @@ function folders() {
 }
 function subtitle(m) {
   const p = [];
-  if (m.type === "youtube") return [m.artist, m.duration ? fmt(m.duration) : ""].filter(Boolean).join("  •  ");
+  if (m.type === "youtube") return [m.artist, popText(m), m.duration ? fmt(m.duration) : ""].filter(Boolean).join("  •  ");
   if (m.type === "audio" && m.artist) p.push(m.artist);
   if (m.type === "video" && m.width) p.push(`${m.width} × ${m.height}`);
   if (m.folder) p.push(m.folder);
@@ -1427,7 +1432,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.9\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 2.0\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1479,7 +1484,7 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.9 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 2.0 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   const saveKey = (announce) => {
     const v = $("ytKey").value.trim();
     if (v === (settings.ytKey || "")) { if (announce) toast(v ? "Anahtar kayıtlı." : "Anahtar boş."); return; }
@@ -1688,7 +1693,7 @@ document.addEventListener("visibilitychange", () => {
 /* Arama: YouTube Data API v3 (anahtar yalnızca bu cihazda saklanır). Çalma: YouTube'un resmi gömülü oynatıcısı.
    Premium'un arka planda çalma ve indirme özellikleri yalnızca YouTube Music uygulamasındadır; oraya derin bağlantı verilir. */
 const inFrame = (() => { try { return window.top !== window; } catch { return true; } })();
-const yt = { query: "", results: [], next: null, loading: false, error: "" };
+const yt = { query: "", results: [], next: null, loading: false, error: "", raw: null };
 const ytmSearchUrl = (q) => `https://music.youtube.com/search?q=${encodeURIComponent(q)}`;
 const ytmUrl = (m) => `https://music.youtube.com/watch?v=${encodeURIComponent(m.yt)}`;
 const ytmRadioUrl = (m) => `https://music.youtube.com/watch?v=${encodeURIComponent(m.yt)}&list=RDAMVM${encodeURIComponent(m.yt)}`;
@@ -1713,10 +1718,12 @@ async function ytApi(path, params) {
 
 /* Bir sanatçının şarkıları: Müzik kategorisinde arar, süreleri alır, kısa videoları ve çok uzun derlemeleri ayıklar */
 async function ytSearchArtist(artist, pageToken) {
-  const s = await ytApi("search", { part: "snippet", type: "video", videoCategoryId: "10", maxResults: "50", q: artist, pageToken, regionCode: "TR", relevanceLanguage: "tr" });
+  // En çok izlenen / beğenilen için YouTube'dan izlenmeye göre sıralı iste; beğeniye göre sıralama aşağıda yapılır
+  const order = settings.ytOrder === "relevance" ? "relevance" : "viewCount";
+  const s = await ytApi("search", { part: "snippet", type: "video", videoCategoryId: "10", maxResults: "50", q: artist, pageToken, order, regionCode: "TR", relevanceLanguage: "tr" });
   const ids = (s.items || []).map((i) => i.id?.videoId).filter(Boolean);
   if (!ids.length) return { items: [], next: null };
-  const v = await ytApi("videos", { part: "contentDetails,snippet,status", id: ids.join(",") });
+  const v = await ytApi("videos", { part: "contentDetails,snippet,status,statistics", id: ids.join(",") });
   const q = lower(artist);
   let items = (v.items || [])
     .filter((x) => x.status?.embeddable !== false)
@@ -1728,15 +1735,33 @@ async function ytSearchArtist(artist, pageToken) {
         title: decodeHtml(sn.title || ""), name: decodeHtml(sn.title || ""), artist: ch,
         thumb: sn.thumbnails?.high?.url || sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || null,
         duration: isoDur(x.contentDetails?.duration), folder: artist, size: 0, added: Date.now(), pos: 0, plays: 0, lastPlayed: 0,
+        views: +(x.statistics?.viewCount || 0), likes: +(x.statistics?.likeCount || 0),
       };
     })
     .filter((m) => m.duration >= 60 && m.duration <= 15 * 60);
   if (settings.ytOnlyArtist) {
     const strict = items.filter((m) => lower(m.artist).includes(q) || lower(m.title).includes(q));
-    if (strict.length >= 3) items = strict;
+    if (strict.length >= 5) items = strict; // en az 5 şarkı kalmıyorsa filtreyi gevşet
   }
+  items = sortByPopularity(items);
   return { items, next: s.nextPageToken || null };
 }
+
+/* Her sanatçının listesinden seçili ölçüte göre en popüler N şarkı; sanatçılar dönüşümlü dizilir */
+function pickPopular(raw) {
+  const per = Math.max(5, settings.ytPerArtist || 5);
+  const lists = raw.map((l) => sortByPopularity(l).slice(0, per));
+  const merged = [];
+  for (let i = 0; i < Math.max(0, ...lists.map((l) => l.length)); i++) lists.forEach((l) => l[i] && merged.push(l[i]));
+  return dedupe(merged);
+}
+function sortByPopularity(list) {
+  if (settings.ytOrder === "likes") return [...list].sort((a, b) => b.likes - a.likes);
+  if (settings.ytOrder === "viewCount") return [...list].sort((a, b) => b.views - a.views);
+  return list;
+}
+const compact = new Intl.NumberFormat("tr-TR", { notation: "compact", maximumFractionDigits: 1 });
+const popText = (m) => [m.views ? `${compact.format(m.views)} izlenme` : "", m.likes ? `${compact.format(m.likes)} beğeni` : ""].filter(Boolean).join(" · ");
 
 function ytRemember(q) {
   settings.ytRecent = [q, ...(settings.ytRecent || []).filter((x) => lower(x) !== lower(q))].slice(0, 12);
@@ -1750,19 +1775,20 @@ async function ytRun(query, more = false) {
   if (state.tab !== "youtube") { state.tab = "youtube"; state.folder = null; }
   if (!settings.ytKey) { yt.query = query; yt.error = ""; render(); toast("Önce Ayarlar'dan YouTube API anahtarını girin."); return; }
   if (inFrame) { toast("YouTube araması bu önizlemede çalışmaz. GitHub adresindeki sürümü açın: trocki59-byte.github.io/AuroraMediaPlayer", 5000); return; }
-  const artists = query.split(/[,;]+/).map((x) => x.trim()).filter(Boolean).slice(0, 5);
+  const artists = query.split(/[,;]+/).map((x) => x.trim()).filter(Boolean).slice(0, 10);
   yt.loading = true; yt.error = "";
   if (!more) { yt.query = query; yt.results = []; yt.next = null; }
   render();
   try {
     if (artists.length > 1 && !more) {
-      const all = await Promise.all(artists.map((a) => ytSearchArtist(a).then((r) => r.items).catch(() => [])));
-      // Sanatçıları dönüşümlü sırala, sonra karıştırılabilir
-      const merged = [];
-      for (let i = 0; i < Math.max(...all.map((l) => l.length)); i++) all.forEach((l) => l[i] && merged.push(l[i]));
-      yt.results = dedupe(merged);
+      const raw = await Promise.all(artists.map((a) => ytSearchArtist(a).then((r) => dedupe(r.items)).catch(() => [])));
+      const missing = artists.filter((_, i) => !raw[i].length);
+      if (missing.length) toast(`Şarkı bulunamadı: ${missing.join(", ")}`, 3500);
+      yt.raw = raw;
+      yt.results = pickPopular(raw);
       yt.next = null;
     } else {
+      yt.raw = null;
       const r = await ytSearchArtist(more ? yt.query : query, more ? yt.next : undefined);
       yt.results = dedupe([...yt.results, ...r.items]);
       yt.next = r.next;
@@ -1779,6 +1805,13 @@ async function ytRun(query, more = false) {
 function dedupe(list) {
   const seen = new Set();
   return list.filter((m) => { const k = lower(m.title).replace(/\(.*?\)|\[.*?\]/g, "").replace(/official|video|audio|lyrics?|klip|resmi/gi, "").replace(/\s+/g, " ").trim(); if (seen.has(m.yt) || seen.has(k)) return false; seen.add(m.yt); seen.add(k); return true; });
+}
+
+async function ytHotMix() {
+  const q = ($("ytQ")?.value || yt.query || "").trim();
+  if (!q) { toast("Önce sanatçı adlarını yazın, virgülle ayırın: Tarkan, Sezen Aksu, Barış Manço"); $("ytQ")?.focus(); return; }
+  await ytRun(q);
+  if (yt.results.length) ytPlayAll(true);
 }
 
 function ytPlayAll(shuffle) {
@@ -1828,9 +1861,14 @@ function renderYT() {
   $("list").innerHTML = `<div class="yt">
     <form class="yt-form" id="ytForm" autocomplete="off">
       <label class="sr" for="ytQ">Sanatçı</label>
-      <input id="ytQ" type="search" placeholder="Sanatçı adı · birden çok için virgül: Tarkan, Sezen Aksu" value="${esc(yt.query)}" enterkeyhint="search">
+      <input id="ytQ" type="search" placeholder="Sanatçılar, virgülle: Tarkan, Sezen Aksu, Barış Manço" value="${esc(yt.query)}" enterkeyhint="search">
       <button class="add-btn" type="submit">Ara</button>
     </form>
+    <div class="yt-opts">
+      <div class="yt-opt"><span>Sıralama</span><div class="seg" id="ytOrderSeg">${[["viewCount", "En çok izlenen"], ["likes", "En çok beğenilen"], ["relevance", "İlgili"]].map(([k, l]) => `<button type="button" data-order="${k}" aria-pressed="${settings.ytOrder === k}">${l}</button>`).join("")}</div></div>
+      <div class="yt-opt"><span>Sanatçı başına</span><div class="seg" id="ytPerSeg">${[5, 10, 20].map((n) => `<button type="button" data-per="${n}" aria-pressed="${(settings.ytPerArtist || 5) === n}">${n} şarkı</button>`).join("")}</div></div>
+      <button class="add-btn yt-hot" id="ytHot" type="button">🔥 Popüler Mix oluştur ve çal</button>
+    </div>
     ${recent ? `<div class="yt-chips" aria-label="Son aramalar">${recent}</div>` : ""}
     ${yt.query && (keyMissing || inFrame) ? `<a class="btn ext-link" href="${ytmSearchUrl(yt.query)}" target="_blank" rel="noopener" style="text-align:center">"${esc(yt.query)}" — YouTube Music'te aç</a>` : ""}
     ${body}${results}
@@ -1850,6 +1888,20 @@ function renderYT() {
   $("ytForm").onsubmit = (e) => { e.preventDefault(); const q = $("ytQ").value.trim(); if (!q) return; if (settings.ytKey && !inFrame) ytRun(q); else { yt.query = q; render(); } };
   $("list").querySelectorAll("[data-ytq]").forEach((b) => (b.onclick = () => ytRun(b.dataset.ytq)));
   $("ytAll") && ($("ytAll").onclick = () => ytPlayAll(false));
+  $("ytHot").onclick = ytHotMix;
+  $("list").querySelectorAll("[data-order]").forEach((b) => (b.onclick = () => {
+    const prev = settings.ytOrder;
+    settings.ytOrder = b.dataset.order; saveSettings();
+    // YouTube'dan "ilgili" ile "izlenme" sıralı sonuçlar farklı gelir: bu geçişte yeniden ara
+    if (yt.query && (prev === "relevance") !== (settings.ytOrder === "relevance")) { ytRun(yt.query); return; }
+    yt.results = yt.raw ? pickPopular(yt.raw) : sortByPopularity(yt.results);
+    render();
+  }));
+  $("list").querySelectorAll("[data-per]").forEach((b) => (b.onclick = () => {
+    settings.ytPerArtist = +b.dataset.per; saveSettings();
+    if (yt.raw) yt.results = pickPopular(yt.raw);
+    render();
+  }));
   $("ytMix") && ($("ytMix").onclick = () => ytPlayAll(true));
   $("ytMore") && ($("ytMore").onclick = () => ytRun(yt.query, true));
 }
