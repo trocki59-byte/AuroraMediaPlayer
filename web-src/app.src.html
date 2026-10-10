@@ -1,0 +1,1265 @@
+<title>Aurora Media Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: aurora manzaralı başlık → cam kart sekmeler → oynatıcı kartı + kütüphane (geniş ekranda yan yana, telefonda alt alta) */
+:root {
+  color-scheme: dark;
+  --bg: #050816;
+  --bg-2: #081030;
+  --card: rgba(12, 21, 56, .88);
+  --card-2: rgba(7, 12, 36, .94);
+  --tab: rgba(16, 26, 70, .78);
+  --line: rgba(110, 140, 255, .22);
+  --line-soft: rgba(255, 255, 255, .10);
+  --cyan: #2fe3ff;
+  --blue: #3b7bff;
+  --purple: #b04bff;
+  --pink: #ff4bd8;
+  --red: #ff4b6e;
+  --fg: #ffffff;
+  --fg-2: #b7c2e6;
+  --fg-3: #7e8ab3;
+  --display: "Poppins", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Poppins", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --r-card: 22px;
+  --r-tab: 16px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 14px;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+img { display: block; }
+.ico { width: 22px; height: 22px; object-fit: contain; pointer-events: none; }
+
+/* ---------- arka plan ---------- */
+.sky {
+  position: absolute; inset: 0 0 auto 0; height: 340px; z-index: 0; pointer-events: none;
+  background: url("{{bg}}") center 30% / cover no-repeat;
+}
+.sky::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(5,8,22,0) 0%, rgba(5,8,22,.25) 55%, var(--bg) 100%);
+}
+
+.app {
+  position: relative; z-index: 1;
+  max-width: 1500px; margin: 0 auto;
+  padding-inline: 16px; padding-block: 8px 24px;
+  display: grid; gap: 14px;
+}
+
+/* ---------- başlık ---------- */
+.head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.logo { height: clamp(64px, 14vw, 128px); width: auto; max-width: 70%; filter: drop-shadow(0 0 18px rgba(59,123,255,.35)); }
+.head-actions { display: flex; gap: 10px; padding-top: 6px; }
+.glass-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(10, 18, 54, .65);
+  border: 1.5px solid rgba(91, 155, 255, .45);
+  box-shadow: 0 0 14px rgba(59,123,255,.35);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: transform .12s ease, box-shadow .2s ease;
+}
+.glass-btn:active { transform: scale(.94); }
+.glass-btn:hover { box-shadow: 0 0 20px rgba(47,227,255,.5); }
+
+/* ---------- sekmeler ---------- */
+.tabs-wrap { overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
+.tabs-wrap::-webkit-scrollbar { display: none; }
+.tabs { display: grid; grid-template-columns: repeat(7, minmax(84px, 1fr)); gap: 10px; padding-block: 6px 10px; min-width: 640px; }
+.tab {
+  display: grid; justify-items: center; align-content: center; gap: 6px;
+  min-height: 84px; padding: 10px 6px 8px;
+  border-radius: var(--r-tab);
+  background: linear-gradient(180deg, rgba(18,28,72,.82), rgba(10,17,48,.82));
+  border: 1.2px solid rgba(91,140,255,.22);
+  font-weight: 500; font-size: 13px; text-align: center; line-height: 1.2;
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.tab .ico { width: 32px; height: 32px; }
+.tab:active { transform: scale(.95); }
+.tab[aria-selected="true"] {
+  background: linear-gradient(180deg, rgba(36,102,255,.9), rgba(21,58,158,.9));
+  border: 2px solid #7ff2ff; font-weight: 700;
+  box-shadow: 0 0 18px rgba(47,184,255,.75);
+}
+.tab.purple[aria-selected="true"] {
+  background: linear-gradient(180deg, rgba(40,26,110,.92), rgba(16,16,64,.92));
+  border-color: var(--pink);
+  box-shadow: 0 0 18px rgba(192,75,255,.8);
+}
+
+/* ---------- ana içerik ---------- */
+.main { display: grid; gap: 14px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 960px) {
+  .main { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+  .library { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 10px); max-height: calc(100vh - 40px); }
+}
+
+.card {
+  border-radius: var(--r-card);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, var(--card), var(--card-2)) padding-box,
+    linear-gradient(135deg, rgba(47,227,255,.6), rgba(59,123,255,.4), rgba(176,75,255,.6)) border-box;
+  box-shadow: 0 0 26px rgba(59,123,255,.28);
+  min-width: 0;
+}
+
+/* ---------- oynatıcı ---------- */
+.player { overflow: hidden; display: grid; }
+.p-title {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 18px 10px; min-width: 0;
+}
+.p-name { font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.p-info { font-size: 13px; color: var(--fg); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.stage {
+  position: relative; margin-inline: 8px; aspect-ratio: 16 / 9; max-width: 100%;
+  background: #000; border-radius: 10px; overflow: hidden;
+}
+.stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.art {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: url("{{art}}") center / cover no-repeat;
+}
+.art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,22,.15), rgba(5,8,22,.6)); }
+.art-inner { position: relative; display: flex; align-items: center; gap: 18px; padding: 0 70px 0 24px; max-width: 100%; }
+.art-cover {
+  width: clamp(80px, 22vw, 132px); aspect-ratio: 1; border-radius: 18px; flex: none;
+  background: rgba(11,20,52,.8) center / cover no-repeat;
+  border: 1.5px solid rgba(75,200,255,.4);
+  box-shadow: 0 0 26px rgba(176,75,255,.6);
+  display: grid; place-items: center;
+}
+.art-cover img { width: 60%; }
+.art-text { min-width: 0; display: grid; gap: 2px; }
+.art-title { font-family: var(--display); font-weight: 700; font-size: clamp(16px, 3.4vw, 21px); line-height: 1.25; text-wrap: balance; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.art-sub { color: var(--fg-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.art-empty { position: relative; text-align: center; display: grid; gap: 10px; justify-items: center; padding: 16px 70px 16px 16px; }
+.art-empty p { margin: 0; color: var(--fg-2); max-width: 34ch; font-size: 13px; }
+
+.touch { position: absolute; inset: 0; }
+.center-play {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: clamp(64px, 14vw, 92px); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(11,20,64,.55); border: 2px solid rgba(255,255,255,.7);
+  box-shadow: 0 0 22px rgba(47,227,255,.55);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.center-play .ico { width: 42%; height: 42%; margin-left: 6%; }
+.side {
+  position: absolute; right: 12px; top: 50%; translate: 0 -50%;
+  display: grid; gap: 10px;
+}
+.side .glass-btn { width: 44px; height: 44px; }
+.side .ico { width: 20px; height: 20px; }
+.toast-seek {
+  position: absolute; top: 50%; translate: 0 -50%; font-weight: 700; font-size: 20px;
+  opacity: 0; transition: opacity .2s ease; pointer-events: none; text-shadow: 0 0 10px #000;
+}
+.spinner {
+  position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+  border-radius: 50%; border: 3px solid rgba(47,227,255,.25); border-top-color: var(--cyan);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 12px 16px 2px; }
+.time { font-weight: 500; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; --p: 0%;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--blue), var(--cyan)) 0 / var(--p) 100% no-repeat, rgba(255,255,255,.22);
+}
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 6px; background: rgba(255,255,255,.22); }
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+  background: #8cf2ff; box-shadow: 0 0 10px var(--cyan), 0 0 0 3px rgba(47,227,255,.25);
+}
+input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: #8cf2ff; box-shadow: 0 0 10px var(--cyan); }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 4px 12px 14px; }
+.ctl-main { display: flex; align-items: center; justify-content: space-between; gap: 4px; flex: 1 1 420px; }
+.ctl-extra { display: flex; align-items: center; gap: 6px; flex: 0 1 auto; margin-left: auto; }
+.icon-btn { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; transition: background .15s ease, transform .12s ease; }
+.icon-btn:hover { background: rgba(255,255,255,.07); }
+.icon-btn:active { transform: scale(.92); }
+.icon-btn.big .ico { width: 30px; height: 30px; }
+.play-btn {
+  width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: linear-gradient(135deg, #1b2c7a, #0b1440);
+  border: 2.5px solid #7ff2ff;
+  box-shadow: 0 0 22px rgba(59,155,255,.9), inset 0 0 12px rgba(127,242,255,.25);
+  transition: transform .12s ease;
+}
+.play-btn .ico { width: 30px; height: 30px; }
+.play-btn:active { transform: scale(.94); }
+.vol { display: flex; align-items: center; gap: 4px; }
+.vol input { width: 130px; }
+.vol-val { width: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .play-btn { width: 64px; height: 64px; }
+  .icon-btn { width: 42px; height: 42px; }
+  .ctl-main { flex-basis: 100%; }
+  .ctl-extra { margin-left: 0; width: 100%; justify-content: space-between; }
+  .vol { flex: 1; } .vol input { width: 100%; }
+}
+
+/* ---------- tam ekran ---------- */
+.player.fs { position: fixed; inset: 0; z-index: 50; border-radius: 0; border: 0; background: #000; box-shadow: none; grid-template-rows: auto 1fr auto auto; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.player.fs .stage { aspect-ratio: auto; margin: 0; border-radius: 0; }
+
+/* ---------- kütüphane ---------- */
+.library { display: grid; grid-template-rows: auto auto auto 1fr; overflow: hidden; min-height: 320px; }
+.lib-head { display: flex; align-items: center; gap: 8px; padding: 14px 12px 8px 16px; }
+@media (max-width: 420px) { .lib-head { flex-wrap: wrap; } .lib-title { flex-basis: calc(100% - 56px); } }
+.lib-title { flex: 1; min-width: 0; }
+.lib-title h2 { margin: 0; font-family: var(--display); font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-title span { color: var(--fg-2); font-size: 12px; }
+.chip {
+  padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 500; white-space: nowrap;
+  background: rgba(17,28,70,.6); border: 1px solid rgba(91,140,255,.3);
+}
+.add-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; white-space: nowrap;
+  background: linear-gradient(135deg, var(--cyan), var(--blue) 55%, var(--purple));
+  box-shadow: 0 0 14px rgba(59,123,255,.5);
+}
+.add-btn span { font-size: 18px; line-height: 1; }
+.search { padding: 0 12px 8px; }
+.search input {
+  width: 100%; padding: 11px 14px; border-radius: 14px; font: inherit; color: var(--fg);
+  background: rgba(17,28,70,.55); border: 1px solid var(--line); outline: none;
+}
+.search input::placeholder { color: var(--fg-3); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 12px 8px; }
+.stat {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; text-align: left;
+  background: rgba(18,32,78,.5); border: 1px solid rgba(47,227,255,.24);
+}
+.stat:nth-child(2) { border-color: rgba(176,75,255,.3); background: rgba(26,21,78,.5); }
+.stat:nth-child(3) { border-color: rgba(255,75,110,.3); background: rgba(36,20,51,.5); }
+.stat b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+.stat small { color: var(--fg-2); font-size: 11px; }
+.list { overflow-y: auto; padding: 0 6px 8px; min-height: 0; }
+.row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
+  padding: 7px 6px 7px 8px; margin: 3px 0; border-radius: 14px; border: 1px solid transparent; width: 100%; text-align: left;
+}
+.row:hover { background: rgba(255,255,255,.04); }
+.row.now { background: rgba(36,70,143,.22); border-color: rgba(47,227,255,.5); }
+.row.now .r-title { color: var(--cyan); }
+.thumb {
+  width: 96px; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; position: relative;
+  background: #1a2350 center / cover no-repeat; display: grid; place-items: center;
+}
+.thumb .ico { width: 26px; height: 26px; opacity: .9; }
+.thumb.folder { width: 56px; aspect-ratio: 1; background-color: rgba(255,201,77,.13); }
+.badge { position: absolute; right: 4px; bottom: 4px; padding: 1px 5px; border-radius: 6px; background: rgba(0,0,0,.72); font-size: 10px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--cyan); }
+.r-text { min-width: 0; display: grid; gap: 2px; }
+.r-title { font-weight: 500; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-sub { color: var(--fg-2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; opacity: .75; }
+.r-btn.on { opacity: 1; }
+.r-btn .ico { width: 20px; height: 20px; }
+.empty { display: grid; justify-items: center; align-content: center; gap: 10px; text-align: center; padding: 30px 20px; }
+.empty img { width: 70px; opacity: .9; }
+.empty h3 { margin: 0; font-size: 17px; }
+.empty p { margin: 0; color: var(--fg-2); font-size: 13px; max-width: 38ch; line-height: 1.55; }
+
+/* ---------- ayarlar ---------- */
+.settings { overflow-y: auto; padding: 0 14px 18px; display: grid; gap: 8px; align-content: start; }
+.settings h4 { margin: 14px 4px 2px; color: var(--cyan); font-size: 12px; letter-spacing: .14em; }
+.set {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 14px; background: rgba(14,24,64,.6); border: 1px solid var(--line-soft);
+}
+.set > div { min-width: 0; }
+.set b { display: block; font-weight: 500; }
+.set small { color: var(--fg-2); font-size: 12px; line-height: 1.45; display: block; }
+.switch { position: relative; width: 50px; height: 30px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch i { position: absolute; inset: 0; border-radius: 15px; background: rgba(255,255,255,.18); transition: background .2s; pointer-events: none; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: translate .2s; }
+.switch input:checked + i { background: var(--blue); }
+.switch input:checked + i::after { translate: 20px 0; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn {
+  padding: 11px 12px; border-radius: 14px; font-weight: 500; font-size: 13px;
+  background: rgba(17,28,70,.6); border: 1px solid var(--line);
+}
+.btn.danger { border-color: rgba(255,75,110,.45); color: #ffb3c2; }
+.about { display: grid; justify-items: center; gap: 4px; text-align: center; padding: 16px; }
+.about img { height: 84px; width: auto; }
+.about small { color: var(--fg-2); }
+
+/* ---------- alt sayfa (menü / onay) ---------- */
+.sheet-bg { position: fixed; inset: 0; z-index: 80; background: rgba(2,4,14,.6); display: grid; align-items: end; justify-items: center; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.sheet {
+  width: min(520px, 100%); margin: 0 0 calc(env(safe-area-inset-bottom, 0px) + 12px); padding: 8px; border-radius: 20px;
+  background: linear-gradient(180deg, #111c46, #0a1130); border: 1px solid var(--line);
+  box-shadow: 0 0 30px rgba(59,123,255,.35); display: grid; gap: 4px;
+  animation: up .18s ease;
+}
+@media (min-width: 700px) { .sheet-bg { align-items: center; } .sheet { margin: 0; } }
+@keyframes up { from { transform: translateY(16px); opacity: 0; } }
+.sheet h3 { margin: 8px 12px 4px; font-size: 15px; }
+.sheet p { margin: 0 12px 8px; color: var(--fg-2); font-size: 13px; line-height: 1.6; white-space: pre-line; }
+.sheet button { text-align: left; padding: 13px 14px; border-radius: 12px; font-weight: 500; }
+.sheet button:hover { background: rgba(255,255,255,.06); }
+.sheet button.cancel { text-align: center; color: var(--fg-2); }
+.sheet button.danger { color: #ff8ea5; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); translate: -50% 0; z-index: 90;
+  padding: 10px 16px; border-radius: 14px; background: #111c46; border: 1px solid var(--line); box-shadow: 0 0 20px rgba(0,0,0,.5);
+  font-size: 13px; max-width: calc(100% - 32px);
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sky" aria-hidden="true"></div>
+<div class="app">
+  <header class="head">
+    <img class="logo" src="{{logo}}" alt="Aurora Media Player — TROÇKİ Software — Sen İzle, Dünya Güzelleşsin…">
+    <div class="head-actions">
+      <button class="glass-btn" id="btnSearch" aria-label="Ara"><img class="ico" src="{{search}}" alt=""></button>
+      <button class="glass-btn" id="btnMenu" aria-label="Menü"><img class="ico" src="{{more_vert}}" alt=""></button>
+    </div>
+  </header>
+
+  <nav class="tabs-wrap" aria-label="Bölümler">
+    <div class="tabs" role="tablist" id="tabs"></div>
+  </nav>
+
+  <main class="main">
+    <section class="card player" id="player" aria-label="Oynatıcı">
+      <div class="p-title">
+        <div class="p-name" id="pName">Aurora Media Player</div>
+        <div class="p-info" id="pInfo">00:00:00 / 00:00:00</div>
+      </div>
+      <div class="stage" id="stage">
+        <video id="video" playsinline preload="metadata" x-webkit-airplay="allow"></video>
+        <div class="art" id="art">
+          <div class="art-inner" id="artAudio" hidden>
+            <div class="art-cover" id="artCover"><img src="{{mark}}" alt=""></div>
+            <div class="art-text">
+              <div class="art-title" id="artTitle"></div>
+              <div class="art-sub" id="artSub"></div>
+            </div>
+          </div>
+          <div class="art-empty" id="artEmpty">
+            <p>Telefonunuzdaki ya da bilgisayarınızdaki video ve müzikleri ekleyin. Dosyalar bu tarayıcıda kalır, hiçbir yere yüklenmez.</p>
+            <button class="add-btn" data-action="add"><span>+</span> Dosya Ekle</button>
+          </div>
+        </div>
+        <div class="touch" id="touch"></div>
+        <div class="toast-seek" id="seekToast"></div>
+        <div class="spinner" id="spinner" hidden></div>
+        <button class="center-play" id="centerPlay" aria-label="Oynat"><img class="ico" src="{{play}}" alt=""></button>
+        <div class="side">
+          <button class="glass-btn" id="btnFav" aria-label="Favorilere ekle"><img class="ico" id="favIco" src="{{heart_outline}}" alt=""></button>
+          <button class="glass-btn" id="btnQueue" aria-label="Oynatma sırası"><img class="ico" src="{{list}}" alt=""></button>
+          <button class="glass-btn" id="btnMore" aria-label="Oynatıcı seçenekleri"><img class="ico" src="{{more_horiz}}" alt=""></button>
+        </div>
+      </div>
+
+      <div class="progress">
+        <span class="time" id="tCur">00:00:00</span>
+        <label class="sr" for="seek">Konum</label>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+        <span class="time" id="tDur">00:00:00</span>
+      </div>
+
+      <div class="controls">
+        <div class="ctl-main">
+          <button class="icon-btn" id="btnShuffle" aria-label="Karıştır" aria-pressed="false"><img class="ico" src="{{shuffle}}" alt=""></button>
+          <button class="icon-btn" id="btnPrev" aria-label="Önceki"><img class="ico" src="{{prev}}" alt=""></button>
+          <button class="icon-btn big" id="btnBack" aria-label="10 saniye geri"><img class="ico" src="{{replay10}}" alt=""></button>
+          <button class="play-btn" id="btnPlay" aria-label="Oynat"><img class="ico" id="playIco" src="{{play}}" alt=""></button>
+          <button class="icon-btn big" id="btnFwd" aria-label="10 saniye ileri"><img class="ico" src="{{forward10}}" alt=""></button>
+          <button class="icon-btn" id="btnNext" aria-label="Sonraki"><img class="ico" src="{{next}}" alt=""></button>
+          <button class="icon-btn" id="btnRepeat" aria-label="Tekrar"><img class="ico" src="{{repeat_on}}" alt=""></button>
+        </div>
+        <div class="ctl-extra">
+          <div class="vol" id="volWrap">
+            <button class="icon-btn" id="btnMute" aria-label="Sesi kapat"><img class="ico" id="volIco" src="{{volume}}" alt=""></button>
+            <label class="sr" for="vol">Ses</label>
+            <input type="range" id="vol" min="0" max="100" value="80">
+            <span class="vol-val" id="volVal">80</span>
+          </div>
+          <button class="icon-btn" id="btnCast" aria-label="Ekrana yansıt (AirPlay)"><img class="ico" src="{{cast}}" alt=""></button>
+          <button class="icon-btn" id="btnFull" aria-label="Tam ekran"><img class="ico" id="fullIco" src="{{fullscreen}}" alt=""></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card library" id="library" aria-label="Kütüphane">
+      <div class="lib-head">
+        <button class="icon-btn" id="btnLibBack" aria-label="Geri" hidden><img class="ico" src="{{back}}" alt=""></button>
+        <div class="lib-title"><h2 id="libTitle">Ana Sayfa</h2><span id="libCount"></span></div>
+        <button class="chip" id="btnSort" aria-label="Sıralama"></button>
+        <button class="add-btn" data-action="add" aria-label="Dosya ekle"><span>+</span> Ekle</button>
+      </div>
+      <div class="search" id="searchWrap" hidden>
+        <label class="sr" for="searchInput">Ara</label>
+        <input id="searchInput" type="search" placeholder="Video, müzik, sanatçı, klasör ara…" autocomplete="off">
+      </div>
+      <div class="stats" id="stats" hidden>
+        <button class="stat" data-tab="videos"><img class="ico" src="{{video_small}}" alt=""><span><b id="sVideo">0</b><small>Video</small></span></button>
+        <button class="stat" data-tab="music"><img class="ico" src="{{note_small}}" alt=""><span><b id="sMusic">0</b><small>Müzik</small></span></button>
+        <button class="stat" data-tab="favorites"><img class="ico" src="{{heart}}" alt=""><span><b id="sFav">0</b><small>Favori</small></span></button>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="settings" id="settings" hidden></div>
+    </section>
+  </main>
+</div>
+
+<input type="file" id="fileInput" accept="video/*,audio/*,.mkv,.flac,.opus,.ogg" multiple hidden>
+<input type="file" id="folderInput" webkitdirectory multiple hidden>
+<canvas id="thumbCanvas" width="320" height="180" hidden></canvas>
+
+<script>
+"use strict";
+const I = {{icons_json}};
+const $ = (id) => document.getElementById(id);
+const video = $("video");
+
+/* ================================================================ yardımcılar */
+const pad = (n) => String(Math.floor(n)).padStart(2, "0");
+const fmt = (s) => { s = Math.max(0, s || 0); return `${pad(s / 3600)}:${pad((s % 3600) / 60)}:${pad(s % 60)}`; };
+const fmtSize = (b) => { if (!b) return "-"; const u = ["B", "KB", "MB", "GB"]; let i = 0; while (b >= 1024 && i < 3) { b /= 1024; i++; } return `${b.toFixed(i ? 1 : 0)} ${u[i]}`; };
+const trCmp = new Intl.Collator("tr", { sensitivity: "base", numeric: true });
+const lower = (s) => (s || "").toLocaleLowerCase("tr");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function toast(msg, ms = 2600) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg; t.setAttribute("role", "status");
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+/* Basit alt sayfa: menü, onay, bilgi (tarayıcı confirm()/alert() yerine) */
+function sheet({ title, text, items = [], cancel = "Kapat" }) {
+  return new Promise((resolve) => {
+    const bg = document.createElement("div");
+    bg.className = "sheet-bg";
+    const box = document.createElement("div");
+    box.className = "sheet"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
+    if (title) { const h = document.createElement("h3"); h.textContent = title; box.appendChild(h); }
+    if (text) { const p = document.createElement("p"); p.textContent = text; box.appendChild(p); }
+    const done = (v) => { bg.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
+    items.forEach((it) => {
+      const b = document.createElement("button");
+      b.textContent = it.label; if (it.danger) b.className = "danger";
+      b.onclick = () => done(it.value ?? it.label);
+      box.appendChild(b);
+    });
+    const c = document.createElement("button");
+    c.className = "cancel"; c.textContent = cancel; c.onclick = () => done(null);
+    box.appendChild(c);
+    bg.appendChild(box);
+    bg.addEventListener("click", (e) => { if (e.target === bg) done(null); });
+    const onKey = (e) => { if (e.key === "Escape") done(null); };
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(bg);
+    (box.querySelector("button") || c).focus();
+  });
+}
+
+/* ================================================================ ayarlar (cihazda) */
+const SKEY = "aurora.settings.v1";
+const settings = Object.assign(
+  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "" },
+  (() => { try { return JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch { return {}; } })()
+);
+const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* depolama kapalı */ } };
+
+/* ================================================================ IndexedDB kütüphane */
+let db = null;
+function openDb() {
+  return new Promise((res) => {
+    try {
+      const r = indexedDB.open("aurora-media", 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        if (!d.objectStoreNames.contains("files")) d.createObjectStore("files");
+        if (!d.objectStoreNames.contains("meta")) d.createObjectStore("meta", { keyPath: "id" });
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => res(null);
+      r.onblocked = () => res(null);
+    } catch { res(null); }
+  });
+}
+function tx(store, mode, fn) {
+  return new Promise((res, rej) => {
+    if (!db) return res(null);
+    try {
+      const t = db.transaction(store, mode);
+      const s = t.objectStore(store);
+      const out = fn(s);
+      t.oncomplete = () => res(out && "result" in out ? out.result : null);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error);
+    } catch (e) { rej(e); }
+  });
+}
+const dbPutMeta = (m) => tx("meta", "readwrite", (s) => { const c = { ...m }; delete c.blob; delete c.url; delete c.now; return s.put(c); }).catch(() => {});
+const dbPutFile = (id, blob) => tx("files", "readwrite", (s) => s.put(blob, id));
+const dbGetFile = (id) => tx("files", "readonly", (s) => s.get(id)).catch(() => null);
+const dbAllMeta = () => tx("meta", "readonly", (s) => s.getAll()).catch(() => []);
+const dbDelete = (id) => Promise.all([tx("meta", "readwrite", (s) => s.delete(id)), tx("files", "readwrite", (s) => s.delete(id))]).catch(() => {});
+
+/* ================================================================ durum */
+const state = {
+  items: [],          // {id,name,title,artist,type,size,added,duration,width,height,thumb,fav,lastPlayed,pos,plays,folder,blob?,sample?}
+  tab: "home",
+  folder: null,
+  search: "",
+  queue: [], order: [], pos: -1,
+  current: null,
+  url: null,
+};
+const save = (it) => { if (!it.sample) dbPutMeta(it); };
+
+/* ================================================================ sekmeler */
+const TABS = [
+  ["home", "Ana Sayfa", "home"], ["videos", "Videolar", "video"], ["music", "Müzikler", "music"],
+  ["folders", "Klasörler", "folder"], ["favorites", "Favoriler", "heart"], ["recent", "Son Oynatılanlar", "clock"],
+  ["settings", "Ayarlar", "settings"],
+];
+$("tabs").innerHTML = TABS.map(([k, label, ico]) =>
+  `<button class="tab${k === "settings" ? " purple" : ""}" role="tab" data-tab="${k}" aria-selected="false"><img class="ico" src="${I[ico]}" alt="">${label}</button>`
+).join("");
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-tab]");
+  if (t) selectTab(t.dataset.tab);
+  if (e.target.closest("[data-action='add']")) addFiles();
+});
+function selectTab(tab) {
+  state.tab = tab; state.folder = null;
+  try { localStorage.setItem("aurora.tab", tab); } catch {}
+  render();
+}
+
+/* ================================================================ kütüphane görünümü */
+const sortLabel = () => ({ date: "Tarihe göre", title: "Ada göre", duration: "Süreye göre", size: "Boyuta göre" }[settings.sort]) + (settings.desc ? " ↓" : " ↑");
+function sorted(list) {
+  const k = settings.sort, d = settings.desc ? -1 : 1;
+  return [...list].sort((a, b) => {
+    let r = 0;
+    if (k === "title") r = trCmp.compare(a.title, b.title);
+    else if (k === "duration") r = (a.duration || 0) - (b.duration || 0);
+    else if (k === "size") r = (a.size || 0) - (b.size || 0);
+    else r = (a.added || 0) - (b.added || 0);
+    return r * d;
+  });
+}
+function filtered(list) {
+  const q = lower(state.search.trim());
+  if (!q) return list;
+  return list.filter((m) => [m.title, m.name, m.artist, m.folder].some((v) => lower(v).includes(q)));
+}
+const hasProgress = (m) => m.duration > 0 && m.pos / m.duration > 0.02 && m.pos / m.duration < 0.97;
+
+function currentList() {
+  const all = state.items;
+  switch (state.tab) {
+    case "videos": return sorted(filtered(all.filter((m) => m.type === "video")));
+    case "music": return sorted(filtered(all.filter((m) => m.type === "audio")));
+    case "favorites": return sorted(filtered(all.filter((m) => m.fav)));
+    case "recent": return filtered(all.filter((m) => m.lastPlayed)).sort((a, b) => b.lastPlayed - a.lastPlayed);
+    case "queue": return state.order.map((i) => state.queue[i]).filter(Boolean);
+    case "folders": return state.folder ? sorted(filtered(all.filter((m) => m.folder === state.folder))) : [];
+    default: {
+      if (state.search.trim()) return sorted(filtered(all));
+      const cont = all.filter((m) => m.type === "video" && hasProgress(m)).sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 10);
+      const rest = [...all].filter((m) => !cont.includes(m)).sort((a, b) => b.added - a.added);
+      return [...cont, ...rest];
+    }
+  }
+}
+function folders() {
+  const map = new Map();
+  for (const m of filtered(state.items)) {
+    const f = map.get(m.folder) || { name: m.folder, v: 0, a: 0, thumb: null };
+    m.type === "video" ? f.v++ : f.a++;
+    if (!f.thumb && m.thumb) f.thumb = m.thumb;
+    map.set(m.folder, f);
+  }
+  return [...map.values()].sort((a, b) => trCmp.compare(a.name, b.name));
+}
+function subtitle(m) {
+  const p = [];
+  if (m.type === "audio" && m.artist) p.push(m.artist);
+  if (m.type === "video" && m.width) p.push(`${m.width} × ${m.height}`);
+  if (m.folder) p.push(m.folder);
+  p.push(fmt(m.duration));
+  return p.join("  •  ");
+}
+
+function render() {
+  document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+  const titles = { home: "Son Eklenenler", videos: "Videolar", music: "Müzikler", folders: state.folder || "Klasörler", favorites: "Favoriler", recent: "Son Oynatılanlar", settings: "Ayarlar", queue: "Oynatma Sırası" };
+  $("libTitle").textContent = titles[state.tab];
+  $("btnLibBack").hidden = !(state.tab === "queue" || (state.tab === "folders" && state.folder));
+  $("btnSort").textContent = sortLabel();
+  $("btnSort").hidden = ["settings", "recent", "queue"].includes(state.tab) || (state.tab === "folders" && !state.folder);
+  const isSettings = state.tab === "settings";
+  $("settings").hidden = !isSettings;
+  $("list").hidden = isSettings;
+  $("stats").hidden = !(state.tab === "home" && state.items.length && !state.search.trim());
+  $("sVideo").textContent = state.items.filter((m) => m.type === "video").length;
+  $("sMusic").textContent = state.items.filter((m) => m.type === "audio").length;
+  $("sFav").textContent = state.items.filter((m) => m.fav).length;
+
+  if (isSettings) { $("libCount").textContent = ""; renderSettings(); return; }
+
+  if (state.tab === "folders" && !state.folder) {
+    const fs = folders();
+    $("libCount").textContent = `${fs.length} klasör`;
+    $("list").innerHTML = fs.length ? fs.map((f) => `
+      <button class="row" data-folder="${esc(f.name)}">
+        <span class="thumb folder" style="${f.thumb ? `background-image:url('${f.thumb}')` : ""}">${f.thumb ? "" : `<img class="ico" src="${I.folder_small}" alt="">`}</span>
+        <span class="r-text"><span class="r-title">${esc(f.name)}</span><span class="r-sub">${[f.v && `${f.v} video`, f.a && `${f.a} müzik`].filter(Boolean).join("  •  ")}</span></span>
+        <span></span><img class="ico" src="${I.back}" alt="" style="transform:rotate(180deg);opacity:.5;width:16px;height:16px">
+      </button>`).join("") : emptyHtml();
+    return;
+  }
+
+  const list = currentList();
+  $("libCount").textContent = `${list.length} öğe`;
+  $("list").innerHTML = list.length ? list.map((m) => `
+    <div class="row${state.current === m ? " now" : ""}" data-id="${esc(m.id)}" role="button" tabindex="0">
+      <span class="thumb" style="${m.thumb ? `background-image:url('${m.thumb}')` : ""}">
+        ${m.thumb ? "" : `<img class="ico" src="${m.type === "video" ? I.video_small : I.note_small}" alt="">`}
+        ${m.type === "video" && m.duration ? `<span class="badge">${fmt(m.duration)}</span>` : ""}
+        ${hasProgress(m) ? `<span class="bar" style="width:${(m.pos / m.duration) * 100}%"></span>` : ""}
+      </span>
+      <span class="r-text"><span class="r-title">${esc(m.title)}</span><span class="r-sub">${esc(subtitle(m))}</span></span>
+      <button class="r-btn${m.fav ? " on" : ""}" data-fav="${esc(m.id)}" aria-label="${m.fav ? "Favorilerden çıkar" : "Favorilere ekle"}"><img class="ico" src="${m.fav ? I.heart_red : I.heart_outline}" alt=""></button>
+      <button class="r-btn" data-more="${esc(m.id)}" aria-label="Seçenekler"><img class="ico" src="${I.more_horiz}" alt=""></button>
+    </div>`).join("") : emptyHtml();
+}
+
+function emptyHtml() {
+  let h = "Henüz dosya yok", p = "Video ve müziklerinizi ekleyin. Dosyalar yalnızca bu tarayıcıda saklanır.";
+  if (state.search.trim()) { h = "Sonuç bulunamadı"; p = `"${state.search}" ile eşleşen dosya yok.`; }
+  else if (state.tab === "favorites") { h = "Henüz favori yok"; p = "Bir dosyayı favorilere eklemek için yanındaki kalbe dokunun."; }
+  else if (state.tab === "recent") { h = "Henüz bir şey oynatılmadı"; p = "İzlediğiniz ve dinlediğiniz dosyalar burada listelenir."; }
+  else if (state.tab === "queue") { h = "Oynatma sırası boş"; p = "Bir listeden dosya seçtiğinizde sıra oluşur."; }
+  else if (state.tab === "videos") { h = "Henüz video yok"; }
+  else if (state.tab === "music") { h = "Henüz müzik yok"; }
+  const showAdd = !state.search.trim() && ["home", "videos", "music", "folders"].includes(state.tab);
+  return `<div class="empty"><img src="${I.mark}" alt=""><h3>${esc(h)}</h3><p>${esc(p)}</p>${showAdd ? `<button class="add-btn" data-action="add"><span>+</span> Dosya Ekle</button>` : ""}</div>`;
+}
+
+$("list").addEventListener("click", async (e) => {
+  const fav = e.target.closest("[data-fav]");
+  if (fav) { e.stopPropagation(); toggleFav(find(fav.dataset.fav)); return; }
+  const more = e.target.closest("[data-more]");
+  if (more) { e.stopPropagation(); itemMenu(find(more.dataset.more)); return; }
+  const f = e.target.closest("[data-folder]");
+  if (f) { state.folder = f.dataset.folder; render(); return; }
+  const row = e.target.closest("[data-id]");
+  if (row) playFromList(find(row.dataset.id));
+});
+$("list").addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-id]")) { e.preventDefault(); playFromList(find(e.target.dataset.id)); }
+});
+const find = (id) => state.items.find((m) => m.id === id) || state.queue.find((m) => m.id === id);
+
+$("btnLibBack").onclick = () => {
+  if (state.tab === "queue") selectTab(state.current?.type === "audio" ? "music" : "videos");
+  else { state.folder = null; render(); }
+};
+$("btnSort").onclick = async () => {
+  const v = await sheet({ title: "Sırala", items: [
+    { label: "Tarihe göre", value: "date" }, { label: "Ada göre", value: "title" },
+    { label: "Süreye göre", value: "duration" }, { label: "Boyuta göre", value: "size" },
+    { label: settings.desc ? "Artan sıraya çevir ↑" : "Azalan sıraya çevir ↓", value: "dir" },
+  ] });
+  if (!v) return;
+  if (v === "dir") settings.desc = !settings.desc; else settings.sort = v;
+  saveSettings(); render();
+};
+$("btnSearch").onclick = () => {
+  if (state.tab === "settings") selectTab("home");
+  const w = $("searchWrap");
+  w.hidden = !w.hidden;
+  if (!w.hidden) $("searchInput").focus();
+  else { state.search = ""; $("searchInput").value = ""; render(); }
+};
+$("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+
+/* ================================================================ dosya ekleme */
+const VIDEO_EXT = /\.(mp4|m4v|mov|webm|mkv|3gp|ogv|avi)$/i;
+const AUDIO_EXT = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|aif|aiff|caf)$/i;
+function addFiles() {
+  $("fileInput").value = "";
+  $("fileInput").click();
+}
+$("fileInput").addEventListener("change", (e) => importFiles([...e.target.files]));
+$("folderInput").addEventListener("change", (e) => importFiles([...e.target.files]));
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) importFiles([...e.dataTransfer.files]); });
+
+async function importFiles(files) {
+  const media = files.filter((f) => f.type.startsWith("video/") || f.type.startsWith("audio/") || VIDEO_EXT.test(f.name) || AUDIO_EXT.test(f.name));
+  if (!media.length) { toast("Seçilenler arasında video veya müzik dosyası yok."); return; }
+  toast(`${media.length} dosya ekleniyor…`, 1800);
+  let stored = 0, failed = 0;
+  const added = [];
+  for (const f of media) {
+    const dup = state.items.find((m) => m.name === f.name && m.size === f.size);
+    if (dup) continue;
+    const isVideo = f.type.startsWith("video/") || (!f.type.startsWith("audio/") && VIDEO_EXT.test(f.name));
+    const rel = f.webkitRelativePath || "";
+    const folder = rel.includes("/") ? rel.split("/").slice(-2, -1)[0] : (isVideo ? "Videolarım" : "Müziklerim");
+    const m = {
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      name: f.name, title: f.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " "), artist: "",
+      type: isVideo ? "video" : "audio", size: f.size, added: Date.now(), duration: 0, width: 0, height: 0,
+      thumb: null, fav: false, lastPlayed: 0, pos: 0, plays: 0, folder, blob: f,
+    };
+    if (settings.store && db) {
+      try { await dbPutFile(m.id, f); await dbPutMeta(m); stored++; m.persisted = true; }
+      catch { failed++; }
+    }
+    state.items.push(m);
+    added.push(m);
+  }
+  // Örnek parçayı gerçek dosyalar gelince gizle
+  const wasSample = state.current?.sample;
+  if (added.length) state.items = state.items.filter((m) => !m.sample);
+  render();
+  if (!added.length) { toast("Bu dosyalar zaten kütüphanede."); return; }
+  if (failed) toast(`${added.length} dosya eklendi. ${failed} tanesi depolama dolu olduğu için yalnızca bu oturumda kalacak.`, 4500);
+  else toast(`${added.length} dosya eklendi${settings.store ? "" : " (bu oturum için)"}.`);
+  try { navigator.storage?.persist?.(); } catch {}
+  probeQueue.push(...added);
+  runProbe();
+  if (!state.current || wasSample) { video.pause(); prepare(added[0], [...added]); }
+}
+
+/* Süre, çözünürlük ve küçük resim: gizli bir video öğesiyle sırayla okunur */
+const probeQueue = [];
+let probing = false;
+async function runProbe() {
+  if (probing) return;
+  probing = true;
+  while (probeQueue.length) {
+    const m = probeQueue.shift();
+    try { await probe(m); } catch {}
+    save(m);
+    render(); updateInfo();
+  }
+  probing = false;
+}
+async function blobOf(m) {
+  if (m.blob) return m.blob;
+  const b = await dbGetFile(m.id);
+  if (b) m.blob = b;
+  return b;
+}
+async function probe(m) {
+  const blob = await blobOf(m);
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const el = document.createElement(m.type === "video" ? "video" : "audio");
+  el.muted = true; el.preload = "metadata"; el.playsInline = true;
+  el.setAttribute("playsinline", "");
+  el.src = url;
+  try {
+    await new Promise((res, rej) => { el.onloadedmetadata = res; el.onerror = rej; setTimeout(res, 8000); });
+    if (isFinite(el.duration)) m.duration = el.duration;
+    if (m.type === "video") {
+      m.width = el.videoWidth; m.height = el.videoHeight;
+      el.currentTime = Math.min(1.5, (m.duration || 3) / 3);
+      await new Promise((res) => { el.onseeked = res; setTimeout(res, 5000); });
+      if (el.videoWidth) {
+        const c = $("thumbCanvas"), ctx = c.getContext("2d");
+        const r = Math.max(c.width / el.videoWidth, c.height / el.videoHeight);
+        const w = el.videoWidth * r, h = el.videoHeight * r;
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(el, (c.width - w) / 2, (c.height - h) / 2, w, h);
+        m.thumb = c.toDataURL("image/jpeg", 0.72);
+      }
+    }
+  } finally {
+    el.removeAttribute("src"); el.load(); URL.revokeObjectURL(url);
+  }
+}
+
+/* ================================================================ oynatma */
+function rebuildOrder(startIndex) {
+  const n = state.queue.length;
+  let order = [...Array(n).keys()];
+  if (settings.shuffle) {
+    order = order.filter((i) => i !== startIndex);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    if (startIndex >= 0) order.unshift(startIndex);
+    state.pos = 0;
+  } else state.pos = Math.max(0, startIndex);
+  state.order = order;
+}
+function playFromList(m) {
+  if (!m) return;
+  if (state.tab === "queue") { const i = state.queue.indexOf(m); state.pos = state.order.indexOf(i); load(m, true); return; }
+  const list = currentList().filter((x) => x.type === m.type);
+  state.queue = list.includes(m) ? list : [m, ...list];
+  rebuildOrder(state.queue.indexOf(m));
+  load(m, true);
+}
+function prepare(m, list) {
+  state.queue = list.includes(m) ? list : [m, ...list];
+  rebuildOrder(state.queue.indexOf(m));
+  load(m, false);
+}
+
+let pendingResume = 0, pendingPlay = false;
+async function load(m, autoplay) {
+  saveProgress(true);
+  const blob = await blobOf(m);
+  if (!blob) { toast(`"${m.title}" açılamadı. Dosya bu tarayıcıda bulunamadı; yeniden ekleyin.`, 4000); return; }
+  if (state.url) URL.revokeObjectURL(state.url);
+  state.url = URL.createObjectURL(blob);
+  state.current = m;
+  settings.last = m.id; saveSettings();
+  pendingResume = settings.resume && m.pos > 5 && m.duration && m.pos < m.duration - 8 ? m.pos : 0;
+  pendingPlay = autoplay;
+  video.src = state.url;
+  video.playbackRate = settings.speed;
+  video.load();
+  if (autoplay) {
+    m.lastPlayed = Date.now(); m.plays = (m.plays || 0) + 1; save(m);
+    video.play().catch(() => {});
+  }
+  updateNowPlaying();
+  render();
+}
+video.addEventListener("loadedmetadata", () => {
+  const m = state.current;
+  if (m) {
+    if (isFinite(video.duration) && !m.duration) m.duration = video.duration;
+    if (video.videoWidth && !m.width) { m.width = video.videoWidth; m.height = video.videoHeight; }
+    save(m);
+  }
+  if (pendingResume) { video.currentTime = pendingResume; pendingResume = 0; }
+  video.playbackRate = settings.speed;
+  updateInfo();
+});
+video.addEventListener("ended", () => {
+  const m = state.current;
+  if (m) { m.pos = 0; save(m); }
+  if (settings.repeat === "one") { video.currentTime = 0; video.play().catch(() => {}); return; }
+  if (settings.autoNext) next(true);
+});
+video.addEventListener("error", () => {
+  if (!state.current) return;
+  toast(`Bu dosya bu tarayıcıda oynatılamıyor: ${state.current.name}. iPhone Safari MKV, AVI ve FLAC dosyalarını desteklemez; MP4, MOV, MP3 ya da M4A deneyin.`, 6000);
+});
+["play", "pause", "waiting", "playing", "canplay"].forEach((ev) => video.addEventListener(ev, updatePlayState));
+video.addEventListener("pause", () => saveProgress(true));
+video.addEventListener("timeupdate", () => { updateTime(); saveProgress(false); });
+video.addEventListener("durationchange", updateTime);
+
+function next(auto = false) {
+  if (!state.order.length) return;
+  let p = state.pos + 1;
+  if (p >= state.order.length) {
+    if (auto && settings.repeat === "off") { saveProgress(true); return; }
+    if (settings.shuffle) rebuildOrder(-1);
+    p = 0;
+  }
+  state.pos = p;
+  load(state.queue[state.order[p]], true);
+}
+function prev() {
+  if (!state.order.length) return;
+  if (video.currentTime > 3) { video.currentTime = 0; return; }
+  state.pos = state.pos - 1 < 0 ? state.order.length - 1 : state.pos - 1;
+  load(state.queue[state.order[state.pos]], true);
+}
+function togglePlay() {
+  if (!state.current) {
+    const first = currentList()[0] || state.items[0];
+    if (first) playFromList(first); else addFiles();
+    return;
+  }
+  if (video.paused) {
+    if (video.ended) video.currentTime = 0;
+    video.play().catch(() => toast("Oynatma başlatılamadı."));
+  } else video.pause();
+}
+function skip(s) {
+  if (!state.current || !isFinite(video.duration)) return;
+  video.currentTime = Math.min(Math.max(0, video.currentTime + s), Math.max(0, video.duration - 0.3));
+}
+let lastSave = 0;
+function saveProgress(force) {
+  const m = state.current;
+  if (!m || !video.currentTime) return;
+  const now = Date.now();
+  if (!force && now - lastSave < 5000) return;
+  lastSave = now;
+  m.pos = video.currentTime;
+  save(m);
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveProgress(true); });
+window.addEventListener("pagehide", () => saveProgress(true));
+
+/* ================================================================ arayüz güncelleme */
+function setRange(el, frac) { el.style.setProperty("--p", `${Math.max(0, Math.min(1, frac)) * 100}%`); }
+let seeking = false;
+function updateTime() {
+  const d = isFinite(video.duration) ? video.duration : state.current?.duration || 0;
+  const t = video.currentTime || 0;
+  $("tCur").textContent = fmt(t);
+  $("tDur").textContent = fmt(d);
+  if (!seeking) { $("seek").value = d ? Math.round((t / d) * 1000) : 0; setRange($("seek"), d ? t / d : 0); }
+  updateInfo();
+}
+function updateInfo() {
+  const m = state.current;
+  const d = isFinite(video.duration) ? video.duration : m?.duration || 0;
+  const res = m?.type === "video" && (video.videoWidth || m.width) ? `${video.videoWidth || m.width} × ${video.videoHeight || m.height}   |   ` : "";
+  $("pInfo").textContent = `${res}${fmt(video.currentTime)} / ${fmt(d)}`;
+}
+function updatePlayState() {
+  const playing = !video.paused && !video.ended;
+  $("playIco").src = playing ? I.pause : I.play;
+  $("btnPlay").setAttribute("aria-label", playing ? "Duraklat" : "Oynat");
+  $("centerPlay").hidden = playing || state.current?.type !== "video";
+  $("spinner").hidden = !(state.current && !video.paused && video.readyState < 3);
+  if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+}
+function updateNowPlaying() {
+  const m = state.current;
+  $("pName").textContent = m ? m.name : "Aurora Media Player";
+  const isAudio = m && m.type === "audio";
+  $("art").hidden = !!(m && m.type === "video");
+  $("artAudio").hidden = !isAudio;
+  $("artEmpty").hidden = !!m;
+  if (isAudio) {
+    $("artTitle").textContent = m.title;
+    $("artSub").textContent = [m.artist, m.folder].filter(Boolean).join("  •  ");
+    $("artCover").style.backgroundImage = m.thumb ? `url('${m.thumb}')` : "";
+    $("artCover").querySelector("img").hidden = !!m.thumb;
+  }
+  $("favIco").src = m?.fav ? I.heart_red : I.heart_outline;
+  $("btnFav").setAttribute("aria-label", m?.fav ? "Favorilerden çıkar" : "Favorilere ekle");
+  if ("mediaSession" in navigator && m) {
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: m.title, artist: m.artist || "Aurora Media Player", album: m.folder,
+        artwork: [{ src: m.thumb || I.mark, sizes: "320x180", type: m.thumb ? "image/jpeg" : "image/webp" }],
+      });
+    } catch {}
+  }
+  updateTime(); updatePlayState();
+}
+function updateModes() {
+  $("btnShuffle").querySelector("img").src = settings.shuffle ? I.shuffle_on : I.shuffle;
+  $("btnShuffle").setAttribute("aria-pressed", String(settings.shuffle));
+  $("btnRepeat").querySelector("img").src = { off: I.repeat, all: I.repeat_on, one: I.repeat_one }[settings.repeat];
+  $("btnRepeat").setAttribute("aria-label", { off: "Tekrar kapalı", all: "Tümünü tekrarla", one: "Tek parçayı tekrarla" }[settings.repeat]);
+  const v = settings.volume;
+  $("vol").value = v; $("volVal").textContent = v; setRange($("vol"), v / 100);
+  $("volIco").src = video.muted || v === 0 ? I.mute : I.volume;
+}
+
+/* ================================================================ kontroller */
+$("btnPlay").onclick = togglePlay;
+$("centerPlay").onclick = togglePlay;
+$("btnPrev").onclick = prev;
+$("btnNext").onclick = () => next(false);
+$("btnBack").onclick = () => skip(-10);
+$("btnFwd").onclick = () => skip(10);
+$("btnShuffle").onclick = () => {
+  settings.shuffle = !settings.shuffle; saveSettings();
+  rebuildOrder(state.current ? state.queue.indexOf(state.current) : -1);
+  updateModes(); toast(settings.shuffle ? "Karıştırma açık" : "Karıştırma kapalı", 1400);
+};
+$("btnRepeat").onclick = () => {
+  settings.repeat = { off: "all", all: "one", one: "off" }[settings.repeat]; saveSettings(); updateModes();
+  toast({ off: "Tekrar kapalı", all: "Tümünü tekrarla", one: "Tek parçayı tekrarla" }[settings.repeat], 1400);
+};
+$("seek").addEventListener("input", (e) => {
+  seeking = true;
+  const d = isFinite(video.duration) ? video.duration : 0;
+  setRange(e.target, e.target.value / 1000);
+  $("tCur").textContent = fmt((e.target.value / 1000) * d);
+});
+$("seek").addEventListener("change", (e) => {
+  const d = isFinite(video.duration) ? video.duration : 0;
+  if (d) video.currentTime = (e.target.value / 1000) * d;
+  seeking = false;
+});
+$("vol").addEventListener("input", (e) => {
+  settings.volume = +e.target.value; video.volume = settings.volume / 100;
+  if (settings.volume > 0) video.muted = false;
+  saveSettings(); updateModes();
+});
+$("btnMute").onclick = () => { video.muted = !video.muted; updateModes(); };
+$("btnFav").onclick = () => state.current && toggleFav(state.current);
+$("btnQueue").onclick = () => { exitFull(); state.tab = "queue"; state.folder = null; render(); $("library").scrollIntoView({ behavior: "smooth", block: "start" }); };
+$("btnMore").onclick = playerMenu;
+
+function toggleFav(m) {
+  if (!m) return;
+  m.fav = !m.fav; save(m);
+  if (m === state.current) updateNowPlaying();
+  render();
+}
+
+/* AirPlay (Safari) ya da Chrome'da uzaktan oynatma */
+$("btnCast").onclick = async () => {
+  try {
+    if (video.webkitShowPlaybackTargetPicker) { video.webkitShowPlaybackTargetPicker(); return; }
+    if (video.remote?.prompt) { await video.remote.prompt(); return; }
+  } catch { /* kullanıcı vazgeçti */ return; }
+  toast("Bu tarayıcı ekran yansıtmayı desteklemiyor. iPhone'da Denetim Merkezi › Ekran Yansıtma'yı kullanabilirsiniz.", 4500);
+};
+
+/* Tam ekran: iPhone'da yerel video oynatıcı, diğerlerinde kart tam ekran */
+let cssFull = false;
+async function enterFull() {
+  const p = $("player");
+  if (state.current?.type === "video" && isIOS && video.webkitEnterFullscreen) { video.webkitEnterFullscreen(); return; }
+  try {
+    if (p.requestFullscreen) { await p.requestFullscreen(); return; }
+    if (p.webkitRequestFullscreen) { p.webkitRequestFullscreen(); return; }
+  } catch { /* desteklenmiyor: sayfa içi tam ekran */ }
+  cssFull = true; p.classList.add("fs"); $("fullIco").src = I.fullscreen_exit;
+}
+function exitFull() {
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  if (cssFull) { cssFull = false; $("player").classList.remove("fs"); $("fullIco").src = I.fullscreen; }
+}
+document.addEventListener("fullscreenchange", () => {
+  const on = !!document.fullscreenElement;
+  $("player").classList.toggle("fs", on || cssFull);
+  $("fullIco").src = on ? I.fullscreen_exit : I.fullscreen;
+});
+$("btnFull").onclick = () => (document.fullscreenElement || cssFull ? exitFull() : enterFull());
+
+/* Video alanı: çift dokunuş ±10 sn, tek dokunuş oynat/duraklat */
+let tapTimer = null, lastTap = 0;
+$("touch").addEventListener("click", (e) => {
+  const now = Date.now();
+  if (now - lastTap < 300) {
+    clearTimeout(tapTimer); lastTap = 0;
+    const r = e.currentTarget.getBoundingClientRect();
+    const fwd = e.clientX - r.left > r.width / 2;
+    skip(fwd ? 10 : -10);
+    const t = $("seekToast");
+    t.textContent = fwd ? "10 sn  »" : "«  10 sn";
+    t.style.left = fwd ? "auto" : "14%"; t.style.right = fwd ? "18%" : "auto";
+    t.style.opacity = 1; setTimeout(() => (t.style.opacity = 0), 650);
+    return;
+  }
+  lastTap = now;
+  tapTimer = setTimeout(() => { if (state.current) togglePlay(); else addFiles(); }, 300);
+});
+
+/* Klavye kısayolları (bilgisayarda) */
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea, [role='dialog']")) return;
+  if (e.key === " " || e.key === "k") { e.preventDefault(); togglePlay(); }
+  else if (e.key === "ArrowRight") skip(10);
+  else if (e.key === "ArrowLeft") skip(-10);
+  else if (e.key === "f") $("btnFull").click();
+  else if (e.key === "m") $("btnMute").click();
+  else if (e.key === "Escape") exitFull();
+});
+
+/* Kilit ekranı / kulaklık kontrolleri */
+if ("mediaSession" in navigator) {
+  const ms = navigator.mediaSession;
+  const h = (a, f) => { try { ms.setActionHandler(a, f); } catch {} };
+  h("play", () => video.play()); h("pause", () => video.pause());
+  h("previoustrack", prev); h("nexttrack", () => next(false));
+  h("seekbackward", () => skip(-10)); h("seekforward", () => skip(10));
+  h("seekto", (d) => { if (d.seekTime != null) video.currentTime = d.seekTime; });
+}
+
+/* ================================================================ menüler */
+async function playerMenu() {
+  const v = await sheet({ title: "Oynatıcı", items: [
+    { label: `Oynatma hızı (${settings.speed}x)`, value: "speed" },
+    { label: { off: "Tekrar: kapalı", all: "Tekrar: tümü", one: "Tekrar: tek parça" }[settings.repeat], value: "repeat" },
+    { label: "Medya bilgisi", value: "info" },
+    { label: "Durdur", value: "stop" },
+  ] });
+  if (v === "speed") {
+    const s = await sheet({ title: "Oynatma hızı", items: [0.5, 0.75, 1, 1.25, 1.5, 2].map((x) => ({ label: x === 1 ? "1x (Normal)" : `${x}x`, value: String(x) })) });
+    if (s) { settings.speed = +s; video.playbackRate = settings.speed; saveSettings(); }
+  } else if (v === "repeat") $("btnRepeat").click();
+  else if (v === "info" && state.current) showInfo(state.current);
+  else if (v === "stop") { video.pause(); video.currentTime = 0; }
+}
+function showInfo(m) {
+  const lines = [
+    `Ad: ${m.name}`, `Tür: ${m.type === "video" ? "Video" : "Müzik"}`, `Süre: ${fmt(m.duration)}`,
+    m.type === "video" && m.width ? `Çözünürlük: ${m.width} × ${m.height}` : null,
+    `Boyut: ${fmtSize(m.size)}`, `Klasör: ${m.folder}`,
+    `Eklenme: ${new Date(m.added).toLocaleString("tr-TR")}`, `Oynatılma: ${m.plays || 0} kez`,
+  ].filter(Boolean);
+  sheet({ title: "Medya bilgisi", text: lines.join("\n") });
+}
+async function itemMenu(m) {
+  if (!m) return;
+  const v = await sheet({ title: m.title, items: [
+    { label: "Oynat", value: "play" },
+    { label: m.fav ? "Favorilerden çıkar" : "Favorilere ekle", value: "fav" },
+    { label: "Medya bilgisi", value: "info" },
+    { label: "Kütüphaneden kaldır", value: "del", danger: true },
+  ] });
+  if (v === "play") playFromList(m);
+  else if (v === "fav") toggleFav(m);
+  else if (v === "info") showInfo(m);
+  else if (v === "del") {
+    const ok = await sheet({ title: "Kütüphaneden kaldırılsın mı?", text: `"${m.title}" bu tarayıcıdan silinecek. Cihazınızdaki asıl dosya etkilenmez.`, items: [{ label: "Kaldır", value: "yes", danger: true }], cancel: "Vazgeç" });
+    if (ok) removeItem(m);
+  }
+}
+function removeItem(m) {
+  if (state.current === m) { video.pause(); video.removeAttribute("src"); video.load(); state.current = null; updateNowPlaying(); }
+  state.items = state.items.filter((x) => x !== m);
+  const qi = state.queue.indexOf(m);
+  if (qi >= 0) { state.queue.splice(qi, 1); rebuildOrder(state.current ? state.queue.indexOf(state.current) : -1); }
+  if (!m.sample) dbDelete(m.id);
+  render(); toast("Kaldırıldı.");
+}
+$("btnMenu").onclick = async () => {
+  const items = [{ label: "Dosya ekle", value: "add" }];
+  if ("webkitdirectory" in $("folderInput") && !isIOS) items.push({ label: "Klasör ekle", value: "folder" });
+  items.push({ label: "Sıralama", value: "sort" }, { label: "Oynatma sırası", value: "queue" }, { label: "Ayarlar", value: "settings" }, { label: "Hakkında", value: "about" });
+  const v = await sheet({ title: "Aurora Media Player", items });
+  if (v === "add") addFiles();
+  else if (v === "folder") { $("folderInput").value = ""; $("folderInput").click(); }
+  else if (v === "sort") $("btnSort").click();
+  else if (v === "queue") $("btnQueue").click();
+  else if (v === "settings") selectTab("settings");
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.0\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+};
+
+/* ================================================================ ayarlar sekmesi */
+async function renderSettings() {
+  let usage = "Hesaplanıyor…";
+  const sw = (id, label, desc) => `
+    <div class="set"><div><b>${label}</b><small>${desc}</small></div>
+      <label class="switch"><input type="checkbox" id="${id}" ${settings[id] ? "checked" : ""} aria-label="${label}"><i></i></label></div>`;
+  const persisted = state.items.filter((m) => !m.sample).length;
+  $("settings").innerHTML = `
+    <h4>OYNATMA</h4>
+    ${sw("resume", "Kaldığım yerden devam et", "Dosyayı yeniden açtığınızda son konumdan başlar")}
+    ${sw("autoNext", "Sonrakini otomatik oynat", "Dosya bitince listedeki sıradakine geçer")}
+    <h4>KÜTÜPHANE</h4>
+    ${sw("store", "Dosyaları bu tarayıcıda sakla", "Kapalıysa eklediğiniz dosyalar sayfa kapanınca listeden çıkar")}
+    <div class="set"><div><b>Depolama</b><small id="usage">${usage}</small></div></div>
+    <div class="btn-row">
+      <button class="btn" id="setAdd">Dosya ekle</button>
+      <button class="btn" id="setThumbs">Küçük resimleri yenile</button>
+    </div>
+    <h4>iPhone'DA UYGULAMA GİBİ KULLANIN</h4>
+    <div class="set"><div><b>Ana Ekrana Ekle</b><small>Safari'de bu sayfayı açın, alttaki Paylaş düğmesine dokunun ve "Ana Ekrana Ekle"yi seçin. Aurora, ana ekranınızda simgesiyle tam ekran açılır.</small></div></div>
+    <h4>VERİLER</h4>
+    <div class="btn-row">
+      <button class="btn" id="setHistory">Geçmişi temizle</button>
+      <button class="btn" id="setFavs">Favorileri temizle</button>
+    </div>
+    <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
+    <h4>HAKKINDA</h4>
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.0 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+  ["resume", "autoNext", "store"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
+  $("setAdd").onclick = addFiles;
+  $("setThumbs").onclick = () => { state.items.forEach((m) => { if (m.type === "video") { m.thumb = null; probeQueue.push(m); } }); runProbe(); toast("Küçük resimler yenileniyor…"); };
+  $("setHistory").onclick = async () => {
+    if (!(await sheet({ title: "Geçmişi temizle", text: "Son oynatılanlar ve kaldığınız yerler silinsin mi?", items: [{ label: "Temizle", value: 1, danger: true }], cancel: "Vazgeç" }))) return;
+    state.items.forEach((m) => { m.lastPlayed = 0; m.pos = 0; m.plays = 0; save(m); }); render(); toast("Geçmiş temizlendi.");
+  };
+  $("setFavs").onclick = async () => {
+    if (!(await sheet({ title: "Favorileri temizle", text: "Tüm favoriler kaldırılsın mı?", items: [{ label: "Temizle", value: 1, danger: true }], cancel: "Vazgeç" }))) return;
+    state.items.forEach((m) => { if (m.fav) { m.fav = false; save(m); } }); updateNowPlaying(); render(); toast("Favoriler temizlendi.");
+  };
+  $("setWipe").onclick = async () => {
+    if (!(await sheet({ title: "Tüm dosyalar kaldırılsın mı?", text: "Bu tarayıcıda saklanan bütün video ve müzikler silinir. Cihazınızdaki asıl dosyalar etkilenmez.", items: [{ label: "Hepsini kaldır", value: 1, danger: true }], cancel: "Vazgeç" }))) return;
+    [...state.items].forEach((m) => removeItem(m)); render();
+  };
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (est && $("usage")) $("usage").textContent = `${fmtSize(est.usage || 0)} kullanılıyor · yaklaşık ${fmtSize(est.quota || 0)} kullanılabilir`;
+    else if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`;
+  } catch { if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`; }
+}
+
+/* ================================================================ örnek parça */
+/* Kütüphane boşken oynatıcıyı denemek için tarayıcıda üretilen 40 sn'lik ambiyans (dosya değildir, saklanmaz) */
+function makeSample() {
+  const sr = 22050, secs = 40, n = sr * secs;
+  const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+  const chords = [[220, 277.18, 329.63, 440], [196, 246.94, 293.66, 392], [174.61, 220, 261.63, 349.23], [196, 246.94, 329.63, 392]];
+  for (let i = 0; i < n; i++) {
+    const t = i / sr, ci = Math.floor(t / 10) % 4, fade = Math.min(1, t / 3, (secs - t) / 4);
+    const lfo = 0.6 + 0.4 * Math.sin(2 * Math.PI * 0.12 * t);
+    let s = 0;
+    chords[ci].forEach((f, k) => { s += Math.sin(2 * Math.PI * f * t + k) * (0.18 - k * 0.025) * (0.8 + 0.2 * Math.sin(2 * Math.PI * (0.07 + k * 0.03) * t)); });
+    s += Math.sin(2 * Math.PI * chords[ci][0] * 2 * t) * 0.03 * Math.sin(2 * Math.PI * 0.5 * t) ** 2;
+    v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, s * lfo * fade * 0.8)) * 32767, true);
+  }
+  return {
+    id: "ornek-aurora", name: "Aurora Tonu (örnek).wav", title: "Aurora Tonu (örnek)", artist: "TROÇKİ® Software",
+    type: "audio", size: buf.byteLength, added: Date.now(), duration: secs, width: 0, height: 0,
+    thumb: null, fav: false, lastPlayed: 0, pos: 0, plays: 0, folder: "Örnekler", blob: new Blob([buf], { type: "audio/wav" }), sample: true,
+  };
+}
+
+/* ================================================================ başlat */
+(async function init() {
+  // iPhone'da ses düzeyi yalnızca telefonun tuşlarıyla değişir
+  video.volume = settings.volume / 100;
+  if (isIOS) $("vol").parentElement.querySelectorAll("input, .vol-val").forEach((el) => (el.hidden = true));
+  updateModes();
+  try { const t = localStorage.getItem("aurora.tab"); if (t && TABS.some(([k]) => k === t)) state.tab = t; } catch {}
+
+  db = await openDb();
+  const metas = (await dbAllMeta()) || [];
+  state.items = metas;
+  if (!state.items.length) state.items.push(makeSample());
+  render();
+  updateNowPlaying();
+
+  const last = state.items.find((m) => m.id === settings.last) || (state.items[0]?.sample ? state.items[0] : null);
+  if (last) prepare(last, state.items.filter((m) => m.type === last.type));
+  probeQueue.push(...state.items.filter((m) => !m.sample && (!m.duration || (m.type === "video" && !m.thumb))));
+  runProbe();
+})();
+</script>
