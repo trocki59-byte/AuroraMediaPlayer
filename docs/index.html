@@ -809,7 +809,7 @@ document.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfe
 
 async function importFiles(files) {
   const picked = files.filter((f) => f.type.startsWith("video/") || f.type.startsWith("audio/") || VIDEO_EXT.test(f.name) || AUDIO_EXT.test(f.name));
-  if (!picked.length) { toast("Seçilenler arasında video veya müzik dosyası yok."); return; }
+  if (!picked.length) { toast("Seçilenler arasında video veya müzik dosyası yok (MP3, M4A, WAV, MP4, MOV…)."); return; }
   toast(`${picked.length} dosya ekleniyor…`, 1800);
   let stored = 0, failed = 0;
   const added = [];
@@ -1425,7 +1425,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.5\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.6\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1477,7 +1477,7 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.5 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.6 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   $("ytKeySave").onclick = () => {
     settings.ytKey = $("ytKey").value.trim(); saveSettings();
     toast(settings.ytKey ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
@@ -2040,6 +2040,9 @@ function makeSample() {
 
 /* ================================================================ başlat */
 (async function init() {
+  // iPhone dosya seçicisi tür filtresini yanlış yorumlayıp MP3'leri gri gösterebiliyor:
+  // filtreyi kaldır, tüm dosyalar seçilebilsin; müzik/video olmayanlar importFiles içinde ayıklanır
+  if (isIOS) { $("fileInput").removeAttribute("accept"); $("convertInput").removeAttribute("accept"); }
   // iPhone'da ses düzeyi yalnızca telefonun tuşlarıyla değişir
   video.volume = audioEl.volume = settings.volume / 100;
   if (isIOS) $("vol").parentElement.querySelectorAll("input, .vol-val").forEach((el) => (el.hidden = true));
