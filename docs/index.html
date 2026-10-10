@@ -560,19 +560,39 @@ const settings = Object.assign(
   { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192, ytKey: "", ytRecent: [], ytOnlyArtist: true, },
   (() => { try { return JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch { return {}; } })()
 );
-const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* depolama kapalı */ } };
+const saveSettings = () => {
+  try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* depolama kapalı */ }
+  // iPhone küçük ayar deposunu silebildiği için ayarları veritabanına da yedekle
+  try { if (db) tx("kv", "readwrite", (s) => s.put(JSON.parse(JSON.stringify(settings)), "settings")).catch(() => {}); } catch {}
+};
+/* Veritabanındaki yedekten eksik ayarları (özellikle YouTube anahtarını) geri yükle */
+async function restoreSettingsBackup() {
+  try {
+    const saved = await tx("kv", "readonly", (s) => s.get("settings"));
+    if (!saved || typeof saved !== "object") { saveSettings(); return; }
+    let changed = false;
+    for (const [k, v] of Object.entries(saved)) {
+      const cur = settings[k];
+      const empty = cur == null || cur === "" || (Array.isArray(cur) && !cur.length);
+      if (empty && v != null && v !== "") { settings[k] = v; changed = true; }
+    }
+    if (changed) { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch {} }
+    saveSettings();
+  } catch {}
+}
 
 /* ================================================================ IndexedDB kütüphane */
 let db = null;
 function openDb() {
   return new Promise((res) => {
     try {
-      const r = indexedDB.open("aurora-media", 2);
+      const r = indexedDB.open("aurora-media", 3);
       r.onupgradeneeded = () => {
         const d = r.result;
         if (!d.objectStoreNames.contains("files")) d.createObjectStore("files");
         if (!d.objectStoreNames.contains("meta")) d.createObjectStore("meta", { keyPath: "id" });
         if (!d.objectStoreNames.contains("dirs")) d.createObjectStore("dirs", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("kv")) d.createObjectStore("kv");
       };
       r.onsuccess = () => res(r.result);
       r.onerror = () => res(null);
@@ -1425,7 +1445,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.8\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.9\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1458,7 +1478,7 @@ async function renderSettings() {
     <div class="set" style="display:grid;gap:10px"><div><b>YouTube API anahtarı</b><small>Sanatçı aramak için gerekli. Yalnızca bu cihazda saklanır, hiçbir yere gönderilmez (YouTube'a yapılan aramalar dışında).</small></div>
       <div class="yt-form"><label class="sr" for="ytKey">YouTube API anahtarı</label>
         <input id="ytKey" type="password" placeholder="AIza…" value="${esc(settings.ytKey || "")}" autocomplete="off" spellcheck="false">
-        <button class="add-btn" id="ytKeySave" type="button">Kaydet</button></div>
+        <button class="add-btn" id="ytKeySave" type="button">${settings.ytKey ? "Kaydedildi ✓" : "Kaydet"}</button></div>
       <small>Google Cloud Console › API'ler ve Hizmetler › Kimlik bilgileri. "YouTube Data API v3" etkin olmalı. Güvenlik için anahtarı yalnızca <b>trocki59-byte.github.io</b> adresiyle kısıtlayın.</small>
     </div>
     ${sw("ytOnlyArtist", "Yalnızca o sanatçının şarkıları", "Sonuçlardan başka sanatçılara ait videoları ayıklar")}
@@ -1477,11 +1497,18 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.8 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
-  $("ytKeySave").onclick = () => {
-    settings.ytKey = $("ytKey").value.trim(); saveSettings();
-    toast(settings.ytKey ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.9 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+  const saveKey = (announce) => {
+    const v = $("ytKey").value.trim();
+    if (v === (settings.ytKey || "")) { if (announce) toast(v ? "Anahtar kayıtlı." : "Anahtar boş."); return; }
+    settings.ytKey = v; saveSettings();
+    $("ytKeySave").textContent = v ? "Kaydedildi ✓" : "Kaydet";
+    if (announce || v) toast(v ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
   };
+  $("ytKeySave").onclick = () => saveKey(true);
+  $("ytKey").addEventListener("change", () => saveKey(false));
+  $("ytKey").addEventListener("blur", () => saveKey(false));
+  $("ytKey").addEventListener("input", () => { if ($("ytKey").value.trim().length >= 30) saveKey(false); });
   ["resume", "autoNext", "store", "ytOnlyArtist"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
   $("setAdd").onclick = addFiles;
   if ($("setLink")) $("setLink").onclick = linkFolder;
@@ -1798,9 +1825,11 @@ function renderYT() {
   if (inFrame) {
     body = `<div class="yt-card"><b>Bu bölüm GitHub sürümünde çalışır</b><p class="yt-note">Bu önizleme sayfası YouTube'a bağlanamıyor. Aurora'yı şu adresten açın: <b>trocki59-byte.github.io/AuroraMediaPlayer</b></p></div>`;
   } else if (keyMissing) {
-    body = `<div class="yt-card"><b>YouTube API anahtarı gerekli</b>
-      <p class="yt-note">Şarkıları Aurora'nın içinde listelemek için Ayarlar › YouTube Müzik bölümüne anahtarınızı girin. Anahtar yalnızca bu cihazda saklanır.</p>
-      <button class="btn" data-tab="settings">Ayarlar'a git</button></div>`;
+    body = `<div class="yt-card"><b>YouTube API anahtarı</b>
+      <p class="yt-note">Anahtarınızı buraya yapıştırın; kendiliğinden kaydedilir ve bir daha sorulmaz. Yalnızca bu cihazda saklanır.</p>
+      <div class="yt-form"><label class="sr" for="ytKeyInline">YouTube API anahtarı</label>
+        <input id="ytKeyInline" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false">
+        <button class="add-btn" id="ytKeyInlineSave" type="button">Kaydet</button></div></div>`;
   }
   if (yt.loading) body += `<div class="empty"><div class="spinner" style="position:static;margin:0"></div><p>"${esc(yt.query)}" aranıyor…</p></div>`;
   else if (yt.error) body += `<div class="yt-card"><b>Olmadı</b><p class="yt-note">${esc(yt.error)}</p></div>`;
@@ -1824,6 +1853,18 @@ function renderYT() {
     ${yt.query && (keyMissing || inFrame) ? `<a class="btn ext-link" href="${ytmSearchUrl(yt.query)}" target="_blank" rel="noopener" style="text-align:center">"${esc(yt.query)}" — YouTube Music'te aç</a>` : ""}
     ${body}${results}
   </div>`;
+  if ($("ytKeyInline")) {
+    const saveInline = () => {
+      const v = $("ytKeyInline")?.value.trim();
+      if (!v || v === settings.ytKey) return; // aynı anahtar ikinci kez kaydedilmesin
+      settings.ytKey = v; saveSettings();
+      toast("Anahtar kaydedildi.");
+      if (yt.query) ytRun(yt.query); else render();
+    };
+    $("ytKeyInlineSave").onclick = saveInline;
+    $("ytKeyInline").addEventListener("change", saveInline);
+    $("ytKeyInline").addEventListener("input", () => { if ($("ytKeyInline").value.trim().length >= 30) saveInline(); });
+  }
   $("ytForm").onsubmit = (e) => { e.preventDefault(); const q = $("ytQ").value.trim(); if (!q) return; if (settings.ytKey && !inFrame) ytRun(q); else { yt.query = q; render(); } };
   $("list").querySelectorAll("[data-ytq]").forEach((b) => (b.onclick = () => ytRun(b.dataset.ytq)));
   $("ytAll") && ($("ytAll").onclick = () => ytPlayAll(false));
@@ -2052,6 +2093,8 @@ function makeSample() {
   try { const t = localStorage.getItem("aurora.tab"); if (t && TABS.some(([k]) => k === t)) state.tab = t; } catch {}
 
   db = await openDb();
+  try { navigator.storage?.persist?.(); } catch {}
+  await restoreSettingsBackup();
   const metas = (await dbAllMeta()) || [];
   state.items = metas;
   if (!state.items.length) state.items.push(makeSample());
