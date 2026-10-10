@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
-    tags: [ 'v*' ]
 
 permissions:
   contents: write
@@ -45,16 +44,21 @@ jobs:
           name: AuroraMediaPlayer-apk
           path: cikti/*-Signed.apk
 
-      # v1.0.0 gibi bir etiket gönderildiğinde: GitHub "Releases" sayfasında APK'yı yayınla
+      # main'e her gönderimde: .csproj'deki sürüm (ApplicationDisplayVersion) henüz yayınlanmadıysa
+      # GitHub "Releases" sayfasında APK ile yeni sürüm oluştur. Yeni sürüm için numarayı artırmanız yeterli.
       - name: Sürümü yayınla
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref == 'refs/heads/main'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp cikti/*-Signed.apk "AuroraMediaPlayer-${GITHUB_REF_NAME}.apk"
-          gh release create "$GITHUB_REF_NAME" "AuroraMediaPlayer-${GITHUB_REF_NAME}.apk" \
-            --title "TROÇKİ® AURORA MEDIA PLAYER ${GITHUB_REF_NAME}" \
+          VER="v$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' AuroraMediaPlayer.csproj)"
+          if gh release view "$VER" >/dev/null 2>&1; then
+            echo "$VER zaten yayınlanmış, atlanıyor."; exit 0
+          fi
+          cp cikti/*-Signed.apk "AuroraMediaPlayer-$VER.apk"
+          gh release create "$VER" "AuroraMediaPlayer-$VER.apk" --target "$GITHUB_SHA" \
+            --title "TROÇKİ® AURORA MEDIA PLAYER $VER" \
             --notes "Sen İzle, Dünya Güzelleşsin…
 
           **Android kurulumu:** APK dosyasını telefona indirip açın. İlk kez kuruyorsanız 'Bilinmeyen kaynaklardan yükleme' iznini verin.
