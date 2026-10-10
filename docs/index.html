@@ -1316,7 +1316,8 @@ async function playerMenu() {
     { label: `Oynatma hızı (${settings.speed}x)`, value: "speed" },
     { label: { off: "Tekrar: kapalı", all: "Tekrar: tümü", one: "Tekrar: tek parça" }[settings.repeat], value: "repeat" },
     { label: "Medya bilgisi", value: "info" },
-    ...(state.current && !isMp3(state.current) ? [{ label: "MP3'e dönüştür", value: "mp3" }] : []),
+    ...(state.current?.type === "youtube" ? [{ label: "Arka planda dinle (YouTube Music)", value: "ytm" }] : []),
+    ...(state.current && state.current.type !== "youtube" && !isMp3(state.current) ? [{ label: "MP3'e dönüştür", value: "mp3" }] : []),
     { label: "Durdur", value: "stop" },
   ] });
   if (v === "speed") {
@@ -1325,6 +1326,7 @@ async function playerMenu() {
   } else if (v === "repeat") $("btnRepeat").click();
   else if (v === "info" && state.current) showInfo(state.current);
   else if (v === "mp3" && state.current) convertItems([state.current]);
+  else if (v === "ytm" && state.current) { media.pause(); openExternal(ytmRadioUrl(state.current)); }
   else if (v === "stop") { media.pause(); media.currentTime = 0; }
 }
 function showInfo(m) {
@@ -1341,11 +1343,13 @@ async function itemMenu(m) {
   if (m.type === "youtube") {
     const v = await sheet({ title: m.title, text: m.artist, items: [
       { label: "Çal", value: "play" }, { label: "Sıradaki olarak ekle", value: "nextup" },
+      { label: "Bu şarkıdan mix başlat (YouTube Music, arka planda çalar)", value: "radio" },
       { label: "YouTube Music'te aç", value: "ytm" }, { label: `"${m.artist}" şarkılarını ara`, value: "artist" },
     ] });
     if (v === "play") playFromList(m);
     else if (v === "nextup") playNextUp(m);
     else if (v === "ytm") openExternal(ytmUrl(m));
+    else if (v === "radio") { if (state.current?.type === "youtube") media.pause(); openExternal(ytmRadioUrl(m)); }
     else if (v === "artist") ytRun(m.artist);
     return;
   }
@@ -1386,7 +1390,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.3\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.4\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1430,7 +1434,7 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.3 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.4 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   $("ytKeySave").onclick = () => {
     settings.ytKey = $("ytKey").value.trim(); saveSettings();
     toast(settings.ytKey ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
@@ -1469,6 +1473,7 @@ const inFrame = (() => { try { return window.top !== window; } catch { return tr
 const yt = { query: "", results: [], next: null, loading: false, error: "" };
 const ytmSearchUrl = (q) => `https://music.youtube.com/search?q=${encodeURIComponent(q)}`;
 const ytmUrl = (m) => `https://music.youtube.com/watch?v=${encodeURIComponent(m.yt)}`;
+const ytmRadioUrl = (m) => `https://music.youtube.com/watch?v=${encodeURIComponent(m.yt)}&list=RDAMVM${encodeURIComponent(m.yt)}`;
 function openExternal(url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); }
 const isoDur = (s) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(s || ""); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; };
 const decodeHtml = (s) => { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; };
@@ -1591,6 +1596,7 @@ function renderYT() {
   if (yt.loading) body += `<div class="empty"><div class="spinner" style="position:static;margin:0"></div><p>"${esc(yt.query)}" aranıyor…</p></div>`;
   else if (yt.error) body += `<div class="yt-card"><b>Olmadı</b><p class="yt-note">${esc(yt.error)}</p></div>`;
   const results = !yt.loading && yt.results.length ? `
+    <a class="add-btn" href="${ytmRadioUrl(yt.results[0])}" target="_blank" rel="noopener" style="justify-content:center;text-decoration:none;color:var(--fg)">🎧 Arka planda dinle · YouTube Music mix</a>
     <div class="yt-actions">
       <button class="btn" id="ytAll">▶ Sırayla çal</button>
       <button class="btn" id="ytMix">⤮ Mix (karışık)</button>
@@ -1598,7 +1604,7 @@ function renderYT() {
     </div>
     <div class="list" style="padding:0;overflow:visible">${rowsHtml(yt.results)}</div>
     ${yt.next ? `<button class="btn" id="ytMore">Daha fazla şarkı getir</button>` : ""}
-    <p class="yt-note">Şarkılar YouTube'un kendi oynatıcısıyla çalar. iPhone'da ekran kilitlenince YouTube çalmayı durdurur; arka planda ve reklamsız dinlemek için <b>YouTube Music'te aç</b> ile Premium uygulamanıza geçin.</p>` : "";
+    <p class="yt-note">Aurora'da çalan YouTube şarkıları ekran kilitlenince durur; bu YouTube'un kuralıdır. Ekran kapalıyken dinlemek için <b>Arka planda dinle</b>'ye dokunun: mix, Premium'unuzla YouTube Music uygulamasında açılır ve kilitli ekranda da çalar.</p>` : "";
   $("list").innerHTML = `<div class="yt">
     <form class="yt-form" id="ytForm" autocomplete="off">
       <label class="sr" for="ytQ">Sanatçı</label>
