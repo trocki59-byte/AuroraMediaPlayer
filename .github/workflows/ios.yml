@@ -18,16 +18,19 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: En güncel Xcode
+      - name: Kurulu Xcode sürümleri
+        run: ls /Applications | grep -i xcode || true
+
+      - name: En güncel Xcode (.NET iOS paketinin istediği SDK için)
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: latest
 
       - uses: actions/setup-dotnet@v4
         with:
