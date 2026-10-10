@@ -154,7 +154,7 @@ public sealed class AndroidMediaScanner : IMediaScanner
 				else if (item.IsVideo)
 				{
 #pragma warning disable CA1422, CS0618
-					bmp = MediaStore.Video.Thumbnails.GetThumbnail(Resolver, item.StoreId, ThumbnailKind.MiniKind, null);
+					bmp = MediaStore.Video.Thumbnails.GetThumbnail(Resolver, item.StoreId, VideoThumbnailKind.MiniKind, null);
 #pragma warning restore CA1422, CS0618
 				}
 				else

@@ -12,13 +12,13 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: microsoft
           java-version: '17'
@@ -27,7 +27,14 @@ jobs:
         run: dotnet workload install maui-android
 
       - name: APK derle
-        run: dotnet publish AuroraMediaPlayer.csproj -f net10.0-android -c Release -p:AuroraTarget=android -p:AndroidPackageFormats=apk -o cikti
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish AuroraMediaPlayer.csproj -f net10.0-android -c Release -p:AuroraTarget=android \
+            -p:AndroidPackageFormats=apk -o cikti 2>&1 | tee build.log || {
+            grep -E "error|Error|ERROR" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
 
       - uses: actions/upload-artifact@v4
         with:

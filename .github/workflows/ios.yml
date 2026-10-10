@@ -22,7 +22,7 @@ jobs:
     env:
       IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: En güncel Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -36,8 +36,22 @@ jobs:
       - name: MAUI iOS iş yükü
         run: dotnet workload install maui-ios
 
+      - name: Xcode ve .NET sürümleri
+        run: |
+          xcodebuild -version
+          dotnet --info | head -30
+          dotnet workload list
+
       - name: Derleme kontrolü (simülatör, imzasız)
-        run: dotnet build AuroraMediaPlayer.csproj -f net10.0-ios -c Debug -p:AuroraTarget=ios -p:RuntimeIdentifier=iossimulator-arm64
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet build AuroraMediaPlayer.csproj -f net10.0-ios -c Debug -p:AuroraTarget=ios \
+            -p:RuntimeIdentifier=iossimulator-arm64 -p:ValidateXcodeVersion=false 2>&1 | tee build.log || {
+            # Hata satırlarını GitHub özetine taşı (log indirmeden görülebilsin)
+            grep -E "error|Error|ERROR" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
 
       - name: Sertifika ve profili yükle
         if: env.IOS_P12_BASE64 != ''
