@@ -112,7 +112,7 @@ public sealed class IosMediaScanner : IMediaScanner
 			var id = song.PersistentID;
 			_songs[id] = song;
 			var album = song.AlbumTitle ?? "";
-			var isVideo = (song.MediaType & MPMediaType.AnyVideo) != 0;
+			var isVideo = ((ulong)song.MediaType & 0xff00UL) != 0; // MPMediaTypeAnyVideo
 
 			list.Add(new MediaItem
 			{
@@ -231,7 +231,7 @@ public sealed class IosMediaScanner : IMediaScanner
 			Version = PHVideoRequestOptionsVersion.Current,
 			DeliveryMode = PHVideoRequestOptionsDeliveryMode.HighQualityFormat,
 		};
-		PHImageManager.DefaultManager.RequestAvAsset(asset, options, (avAsset, _, _) => tcs.TrySetResult(avAsset));
+		PHImageManager.DefaultManager.RequestAVAsset(asset, options, (avAsset, _, _) => tcs.TrySetResult(avAsset));
 
 		using var reg = token.Register(() => tcs.TrySetCanceled());
 		var result = await tcs.Task;
