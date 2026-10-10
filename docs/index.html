@@ -91,7 +91,7 @@ img { display: block; }
 /* ---------- sekmeler ---------- */
 .tabs-wrap { overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
 .tabs-wrap::-webkit-scrollbar { display: none; }
-.tabs { display: grid; grid-template-columns: repeat(7, minmax(84px, 1fr)); gap: 10px; padding-block: 6px 10px; min-width: 640px; }
+.tabs { display: grid; grid-template-columns: repeat(8, minmax(84px, 1fr)); gap: 10px; padding-block: 6px 10px; min-width: 730px; }
 .tab {
   display: grid; justify-items: center; align-content: center; gap: 6px;
   min-height: 84px; padding: 10px 6px 8px;
@@ -326,6 +326,27 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .about img { height: 84px; width: auto; }
 .about small { color: var(--fg-2); }
 
+/* ---------- YouTube Müzik ---------- */
+#ytWrap { position: absolute; inset: 0; background: #000; }
+#ytWrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+.yt { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0 6px 10px; align-content: start; }
+.yt > * { min-width: 0; }
+.yt-form { display: flex; gap: 8px; }
+.yt-form input {
+  flex: 1; min-width: 0; padding: 11px 14px; border-radius: 14px; font: inherit; color: var(--fg);
+  background: rgba(17,28,70,.55); border: 1px solid var(--line); outline: none;
+}
+.yt-form input::placeholder { color: var(--fg-3); }
+.yt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.yt-chips button { padding: 6px 12px; border-radius: 15px; font-size: 12px; background: rgba(17,28,70,.6); border: 1px solid rgba(91,140,255,.3); }
+.yt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.yt-actions .btn { flex: 1 1 auto; text-align: center; }
+.yt-note { color: var(--fg-2); font-size: 12px; line-height: 1.55; margin: 0; }
+.yt-note b { color: var(--fg); font-weight: 500; }
+.yt-card { padding: 12px 14px; border-radius: 14px; background: rgba(14,24,64,.6); border: 1px solid var(--line-soft); display: grid; gap: 8px; }
+.ext-link { color: var(--cyan); text-decoration: none; font-weight: 500; }
+.ext-link:hover { text-decoration: underline; }
+
 /* ---------- MP3 dönüştürme ---------- */
 .conv-bar { height: 8px; border-radius: 8px; background: rgba(255,255,255,.14); overflow: hidden; margin: 4px 12px 2px; }
 .conv-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--cyan)); border-radius: 8px; transition: width .2s ease; }
@@ -385,6 +406,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
       <div class="stage" id="stage">
         <video id="video" playsinline preload="metadata" x-webkit-airplay="allow"></video>
         <audio id="audio" preload="auto" x-webkit-airplay="allow" hidden></audio>
+        <div id="ytWrap" hidden><div id="ytHost"></div></div>
         <div class="art" id="art">
           <div class="art-inner" id="artAudio" hidden>
             <div class="art-cover" id="artCover"><img src="data:image/webp;base64,UklGRqAbAABXRUJQVlA4WAoAAAAQAAAAnwAAnwAAQUxQSG4PAAABGUVt20Dq7+RPuBuHiP5PAFTy0PSvScv7/+8lV9Lk3Z3NeXc255xzzvHZLso555xzTrM55wX/f1Wf/6lThd9s0F9m1kGDzVr1DO4iq9nQYb05vNGwry67OmypmVVsoKHN9j6Dkpn1RQs/MrMKXWp21WzpslbvkygZzoELjaZVbKCh1ezCWdQyu3TY0WWjg0wva9VDGGYZzYXDWg2vIiZgAj4jq/AzgcpnQYb/Bv8aSSCcEI0GjRGIMcHEnAyMpAERDAFCIOZEgNAREQwQQgiEk6ARURQJBgooQszxZ0RoVFBikSSEEI8/BGlsaAFCRgkhx55R48FI4F8xqSQx8bhDxMamlX/hp/t8v8znCpVREo57BWlsW+X05+PX+HukUoOC6PEGmqZbtf2XfhL4EX6Dz5ZUUhlyzAvQtNp255v7UeAX+6P+FgapSgh4nAHisO0mPxrwbb37u5hUVUIF5BhXcLTtlm/hewL4+r/mPkmlUiSKx9dop23bNj8Yw2/q3T+MVFJJBROObUWk1bblW/rWRvgh/om/iVQqFSqgxxWgqG2rfm+Mr3+oPyuVopKKIse0QmhpW5v3v5ED+O76vqlUUQji8YRDbFpbvwsO3v4Af0UlFWaK41tGW1uVW3UIvoNv4m+jSKUQBI8jyIBubPUNDusH7s9UihTHtghoY6v5VnIo7j14ZJFKBAWPn4N1ZHuPG3zro5cUSQEE8LgRBMRW4SVu9Ju593eYVBBEjl0BFRzS21s3xHP/0D9HqBIZ8XgZF9Cmc48bv/72HkGSkePXMZRuOus7C+C7enieBFFB9DjBMZQWvg0W+Xm+s/uEQkHkWBUERxu5+MYWwhe4fGgFGQp6fCBgCCidJyz2c7z5KKRRICDHpkFGBc31ZkF8R/nHQARFxOMCAURR5QmL3n439ylQRsNxKcioKpy6ML6d/T/QKggG8VgQh4AizRMW3889KlVGBTwOIAIItnAnE3Dv6u8TUBQMx6HIuILyhCn9Hm56IENx9UEAZdTcyiTcekCLDEWORQVwvOdbTPz6rIICx4MgMqqGyc8sUQAZuuLkQMd3p5NxutOBHOhqAxQBRMvNdOtttaA6IitdxhWV3p2yhKc7R1EE4iobFRDQbNfLsN+XKBhFVroigIra8xlLebqzBTlQVxcMBBzO++1ybDeligiIrGxlXBTdnbGkp7OCAiLgqkIUFMWe170sfTG3rUIEZUULoAwV6pSlvS4UQIbB1YQy6rDni14er3aqyKiykmVchqZOWeKriqioDF1FEEBwdHfhMnk9t6AAArh6RCAIYpNrlvqKqIADWcECqCCKu2uW/HqHIId01QAyKiheLNumo6IgyMp1TAXU3SlLf7pzFBnR1XKggG2nN8u33qZFHKxeRQRU0MtTjuDZTh1TRFfJ6ABQs18fhe2+REFk1QoCqA52ZxzJs509GFddHQigoNrzfns0el0KLYKG1SkIoIA6n3FET2eHDA3iqgCUoULXpo9KX8wKIooJK1IBFUGhzjiy1zMOCaO6EkQZV+3dxqPj9TyiDhRXwYEKqOaUI3wVZCiCrFgFenflUfJ617YK6IoQHAiqyTVT1q7ofU/AFVHGE8CjNxRBUHfXTHn+cBfcXl9MwPVObVFUVqCgMlSMF1PsPhqD8GAzwabTgKIAesRk1Ha0d2dM+SiG0ScTcLrDIQfGo3VgGGq5nuIfeW/DQM9PH0yw3pYCCnLkBRFUVHdnTJi/6sow6sMPujhOd4giB3qUGIyqWPv9FDf/masAEfmn1k8m2O+rHaIB5AgrgOqg3Z0y4fyXvS8BYpq/68394jjboSiACB4dBgIoWvvtFH9DrgMgMdyu72SCXpfjACpHVpChoDqfMeHlp+9JBDCRm09dLI7TWSGAIsGjgiggKs6bnuK/ba4KMRiI53efmaAvZu1GwlCOqAAqAjZ1yoSP/7p3ooAkDJ9/52xxXM+0KIoDj4Qo4w53F07xF5xtQGWYEHbvPTeB17OjHOxROFBFbOuaCZ+9eS+KOEISb75/a3FcBZUD5Ug6kHFxd+UUf85Le7ARCCSBevS6i/N6p6CiArh8EEFU1HDNhDfv3oqiCpBR3754sjiuiAogwXAURRlVvbxmwvx57zikoUkSkoL7z/XiON15ICrisgkgKmLDxRRfaPcAtEWBkEoIz/YbE2yMIIAcRUVAwOF8xoTzh/89HhwgowWvPbNfHKdzq6gIost1WBGr11N8RZ9CDxqEhEqKePfy1QnWPStyRD1AB7o7ZcLLT//7KK2NAqFIJYn3n7pYHKc7VRAdcZlwICjatd9P8ZdcXUFroyIhVJJKOL/7zAT7fbXjDGWJBREERXdnTPj4a9/BRrtRghRJkSLcfDIBp7OiAoji8gxl6LDW2wn2H36wBrtxiASKopIiu7fXE2zXswIKYMLSKoIgoM5nTLh5/h402gPGMqxQ8PxmAk5nRggC6LLA4GB3m57gYndrj7QtLXSwSEglFZgvLyboi50qCCjgcggQIJCQ3SkTrm+/jzZNixqJIamQpMLtvYvjes4oAcKSh5Dh+cYJrs7T0GxpFREIIaEqSVmXVxN4cZuQhKOYJJWqeXfK4t3fDjbtOBgcoZJUqJy3i+N6nueqyujSSJJU1Tx698oJLm5XpNWWRgzEWBRJUUny+HoCr+7Oc40nCS4DCAo2kJfDhK/0WWxabZTxAAmVVELx+PzNxfHk6ukOCSGBsJRGQY2wfZ0Jz/+il2lpW2nQEUigGCmKD715tTi+n4/vIARCIEtgEBAR5ueY8lOn19CtLXbkwEBIEqqS8PjFtyZ45/0vaQkkEDCTgYCM5uL7muLFV97AdtiaPgSEEKqoVMLTn3iwOL7sT7uNBAgQlrBLQDDsfiCm/OPuXdHqVmnksDGECpVKituPvnSCe0/9vy1CMKRrCRAkBurO10xx/7UPxrabVhEPASGBSqqS8ivuvbw4PvInvNcYCRAmlwggJLsfjwnz+725tm27UcUcJoYcOBc5//i7vbiX/s9vt0diDJFMIkONgdS//0Gm+JK7r6btbmlFbjDASCVV5StXby2On+yrnt6iAcIwEwAKGEPyczHh/G+/v73dtrYK3gAEklQqqWL+Y36C7eIefP2vJAgBEqY0HUEQwsX9/7/ZbNbr9X67bZWkaq7d7vLy8gs98xRta2uD3HAgZFhVKb/2Y0+t1+v9vrfdYpKa593u/PL8/PwjbzzUAASgzKJM1zYaZXj7l9pdXFxsNvv9dmubpGqeLy8vLx/fvvMjSbetjYo3BAkUlVQqyR/w0auLzXq93m67G5M5u93u8vb57cfbX+ia0ZBQXWYxpqtBlfFtUlVzKpUUISERxGptbW1AbjxYUFRRlaKTxIiKNG23vbW3zCAhI1SXWQimTYsokpBKkUqKIsOCBEW66VbFhUAZkqSSSkIA8dBN29JoYkhImTIsUkAatUUIJEklKYrUgCQEUaVVUbOImIQkKVIkICqDxqZp1aYBQlEJRYDcmJGOtC02aBJSVEKRIkWlQiCKtioaWWxMQooURQSx1ZaWRltFHBRFJYlFzA1hGrWxbZRhQpEUSSopKqkwVEXRmMXEMiQkBbHE1lZtlVZUMQQyU6GSUIYFCE3TbdNBhBCSkEpSqbkq2dcIqCiGBceQkMQUdJy1R9UWFRHIgErmhILcmCDSdtMtT927nOfdruaaR6Td2uvtfu/XPIYIMgBZeIABYfTq3Zp3867mSpGRbW97v93uNzdfIZVKUQmBHM4IrbZ249VPwQ12b7fr9cXVxfX11Zf/epvEKJKOZnGQWBJiwMuf5qu5Qbu3+/V6c3V1cfpbPE6qkjkkIeZQdDR20912vpoJz//DV+5DAEQkTBgJIRDR3f/9yosbOPQ738dXWZUqqgKxOKxBabVtmztvTPF7vPPCjmAQZBkDwRj3n3r6x1gcX/zae1QqRaVIMIdARFu6bX2dCe/+Pj9VEowc6CRhPDHS/Rt98enizl74cFKpFJVYhIMFUezW1rM7U3zRJz+xIwzFIFMHQyRitq/9ee8ujm948VlSmTMsAzkAR1q6tfkCTPjih3+YChI0KJlMEkwkke0XPXdncZsX/luSYh6EEDMiaVTZOryzn+LP+OCDgqgRS5wspENMMPSLn/7A4vhk3ktS1CCUYVyh07banU8w4cPXPlAREYzGTGZMDIQA/bEn14vbfy9PJ0lVUhZkTKLSdNOa92uKV97YIGjsCMbJYiBWTCDcfvrVxfHG/j1SoZIiiQRAQW1sW58w4e3HT4AWGugYM5kxFlBQAV+7ulhcv3W/EmYqSSABBBxtldzKFM++v0WxRYyAkwWIIUlIkXr7zuJ45+ptU1SoJAFiRNRWWvseE5YbmlYaRZY3JGScx/TifP3mTJJUEhIiIg1bdAu8xJTuW9tRFJBMJgESqFSoFGHCWw+eh1SSIiEEobGxld7emmZj22yVlijgZAESSZFUJSkmfe7tOeMVCiKKatN03WPazYa2aRU1LKtJoJJUaqo7925apDIkQUEbu5H1g4n6emu3tunIMseCSjJnZuJnnr0kSYpKIA2qrdh5wtT7sy3d0iLokiQQUqQqxdTXLz8ySVEJBZ0WW224uJqM/enpxWaz7m0ry5zUXJfnl3OY/pMPb5NhUZSjjS2dJyyh3a2KrOrNU48IqVAJ1QPspnO1WYbj8IO7xxSpIim2ot3Q+IST4frV+6ZCZkK2Smsjp54Q+ERelMxkuJcWbXzCSXH7zP0kJBWyxvHcqRMD/37/nlQSipHW9BNOjv3cowoVKqwVFW7lBMG9q+clVMha2uj2CSdJX78/h2RAQ1PvcLJ86fR+J1CsBWH/1AmDDzx9CQHWINSrnDRvvf9KA8keIZtPnjj4ho+fS2BrYH6Bk+f7b/wpWzDbwHzn604gfNnHnt2Cksz/g5Pog6/70q2SuHv5hRMJH/nfH9pikfln4GR653/9enuYuXzrhRMK//PLP7Vml/xsLz50HBzzEL3y6hAZC2T8+r/+GrpL/xK/zee7Pr2+utqs1+vurcghZdSVlBFyEITMVZeXl+ePHz+8+/DuT/RzlJeVD80SCBCIhgACZkYgK0kgbA0QQEwEAUGyfdk+J1ZVqjJOGA+AEla5JAAyLo53292R86RI5qRSBJM4IpAAuLICoEBGogZpW7dK63lIVagkFCQSB4cN4MoJ4OCwkSg0amO3eEmSVEYhDDOIBwiQlSNADogDGQqOtiq7JIRKwiAGGc0Bx6GMBuMAtRF1BwkFISQSjneJIkKjAFZQOCAMDAAAkDYAnQEqoACgAD4xGIlDoiGhFFr0tCADBLIB2A7hm7+lfXWb48P+Jn42fO3ZH719/fx667BGPU393/sX9P/6H9w7bHmAfpH/pf6l/gO055jv10/W73oPQV6AH8b/n/WD/2X1AP4//hv//61X/F/tH7//Q/+zP/S/xX/W///0CfyL+c/738//kA6hb+AdZn+IH6q9/D8hbIj0C9ieBIgPZ96Sfcl8TD9j9QD8z/9b+2ewB/v/4Pzp/Rv/k9wL+Uf0f/u/3D2pPXP+1vsSfrZ/7iuo6aDuTlcKsRGo+cs9ND3Co/Pe+uH6NHKWbsSuu9YfQVJMlOcj7jaDDMMJ3FNc0PgwYB1s6QonTiCEL5lmGGqny2l1YjeUXvWLI3Com//rGLAnnlW4O6CvYSWHfpdI//IG3klZ38Vb3kyQ2DAvezgap71TnrpLL7XyLdbc3+y95fn9/eCbTrYYS/7tSrr0vaCMd+3X+2mPMUyz630kqk5NoWl8LPXVo3obVoH7dzoo6pth/vENkMukGQ/8g+Ir+CQty9m3verfSdi3ZCSlx3/dR7XEU0e3VabgiKPZIFcrXSujPln+Eg2ASdGuAAD+/u6qD/Gl6Zd5wBapI7F4XxDF8CPX57uvU41O9BqSZEtYrLGhcS4HcDRVKwvxnHnaJznV0qBEEl0CM0tQwmnSUi5fN7qGk7sXq1FsCO56yrni4rBhJna3+FlYFcogA8UtpzHZwE4WiyRluUDvXGQdyDRQlvE2He98/a+DkE6FKzVyJ/MAe8BrdD3koMDtmK6AQ2BUhu6Im14xY0GEKMtLVvIzFz0emgXdbrV9VftHys2qWL//eptGaIFZuVO5PIInNe7zJDXfxvc1PU9qTrgIP8rHNaXxVrG/RJ5e+QuLpcK0VQIuBmOveJ1/BfWHI5naR61LgKGOUWUhpggi4VLkCpKsFdYVk5zyYsfJSWNnAQAAVH6AIASsGrXNLACLkjut7040Jx/X+7vPGz0gsPbCXDZuGwN4bLD+jMyd0xl6feGqZIx3CNKIR9kVwiHy3Vb9pnNfIAAWVfRtWKt8toFbjaxXa13D7tTVg2UKPMOJ7hC0X/pkQpeyHgCbxDcAR8qcPeLzvoZglJgOyfolGEqWLaoaOqGlXsIojE+LcxQLbfzfU+156NBHc4TbxN/VJfbrpaSbZdCvN1d2d9pNJGDFxSWOMzaV8kAapUa9u9ut2fe1iGWLWVT8e2plWL6A4ZsncqI18VVw0C7u/x4/kT/dxGk44Xu50AAef5/6h5sJT45+pYbhEZnEVRv8RFW/UP3uaU5CXXzzVo6k+fAYT2D2uxFa//Bo4RkkPT1b+M82Fauq92SxhTqBpGr8jBxW8aXQ3FSEcrbB6z9f9kFlMhK9D7krB4wob0VD7Ylbr5r1WCeP8gMiRD69pHKRfx+aGza6vkL7HaJEgBL7r/tdOdHAAz0IFz2vEyjgsVYYp7Yh4n6/0pCDr+0DkT5FISJuaJv2Hp7/0BSgKwpbowkUSdOYwM9SPMgZ5gvkl8TOtY0WzXb6x/R/rQzqX5UCZ/Si0DDx+Z4iU2aCK1WYGc1QlrnEbrov3PmV5EYW6CEqN96lkBuDXH6xCJOcqb/3mhQ7iBpA8UnskveN4KcCNNAIwA5AsRczbBa5fyn//iSbNigWeOoLXH5sngAMyikdVCitaMMOiKaP5dEmldcwMLsSiWqnPKpd8VmWV2jn1DRw0MQcp6c88GREn/LtP/NUP1Mpn7SyLpBKHytqmiL64ZyW0J/1WwPRzmeuPcO9qpTvnKNcPEmkwQ56OE7X7XgnjSACK1CpTLxtZ9QcPYZ0X0zLywns2w3AwC0gKsFNM6uLtZ7bUBsR9kgBV/ocPltD4iH/SiX9X8/Qski/ieGvCPcbLatyhtWpn/km4EO0xfpUAdNv4XehQqY8P/y1f+GfnkGt9y3RfkXXDx96xFLtmX8aKpF/fTNfMUW8iLq95Vh+ePCrK5wQjuzB+McMJeWJay1+VEj4LJxDHHsk8i1BQsWlx/XLXJEdeQh1IHvY6TMOIt4nXmTV2khu+ff3w6oCDQOdDKzYDaQOdONM/xwS3N6wvgsfMVnLDZ1n5UGrJs9SkuRG8NL28ZUlZBMs29o/99e9a8bnxVlxaiP3Vgtgrwrt9CMAeX8hIkQzMWtvjsQf4Bv2xFWj5vhaXyj/5Sb5kH/SoR1ApZA1Ku+m5+5UKMp5HmARCODQ5H2yFCAZe9pULFGwUAEAL9lv9bsWB5TfvFv0t/+fMVaYYCvPYJOYxruxDkW11L5tjnyx6bxmsDjdAAI5ETOILeN62M/PDI7gKo9U4Adolji3jbZzJ5ZLwd8S1M2IefwrYR6jgE+Uvs31MMhr8wTn/xIOBzzIOPcPjLEtutIKvpTu1vgOhSaJYGSL9PDCQ+utZ/1zfftKl6DDFyRf4mdDjTARkTs1XOUT0/2BM3rq99ddBxiL+UYHmbiHHeIhMvrsInPi2xSk2GFwl4FJQDuOXbYQ8yW3+HxBx9rPo3EthcjK0Vhq8EPCmdKfRz1LDLM6uCs5w4GyiC7VAWejsk+6UCU6zgjCdQzmWbmbk7iSyLDg+oy1JUACU/jiVJeRThBZfjONZJrfxQHvxrPb1nzI4oxd1/c2w7C2l89n98QHY/jHjCdbeTQD/tJV6/s6avz7HfVV7WB92N2LsF9uQwTjMjLX80H1U6vRXj90aAsebPYgOvXd+F1Q9CHnwf9O7Xaqk6FiKnW5gpJLaZD2/Z4PoTKPlPn0K4ENWAR6cO2I510ydjLvxsvdm+H+hycQxQlkLVjUSzUxXHlqlLG2uVZEnYep/7F6RhdvrT57aydKDLKm9lowvmSXnvUlvAUhB3C+nsrELQUBBIW2Ndgy7+wyoz5VEyExo8hQvskiwnIta4RSSUPY/mzq2xkNSyFCZdrr+jBqARaheAvZ1iKfl0OBPfTZ+VeiY60sB8OLVXYuGWkCln/iZsWGliRrmCN1zomX52Trn1hka0JA9By3FBWtm2GlXFf+7MEzRJjdS/QgholwRe3kBdI3vSXN+/QRD77E7NTWk25w5Lu2xvve2A1N/B9ZExiMI/nHO6PeSBOwbvDZ+pvAdFUxn+hn3eAJChRmrT06+FboEY8vHAc07t57j77DHykzOX2l3AyjMg8xy6nLEmDyTw0784+Zcv+SUzL3tz3wt0OM/3/23d2Fg4ZJrfBch0f0ylInYG7xt7/YcOYG0GaVVcNLHf2nAmxLRrFFfkvi6DWvQ9kteOJvvwHtEfH/1svnTzJYXmryZZqq1/Ub1oXBAyJZ3DbavpLv5Q7a1rAPzjBL9sXOe8TwoSBpNXS2zvq6btSpxzVi5FYG+bkqiPEFaKEntHX7JKmMQssQSIzLVrHPpVmgNyGlk6G3jwwMa+s3wv1V+Is+XG5RFcJ+/U1EG9LuzaqffPom9y796q/rIm+0OZsCW90m0YjxGIMaMF6WRoCA/jP3/TZhsDH/zYh7iBtOoR4Ga8eUfd4XcRRpJlGw/DAEU265TRsWJig4w5EOtUNMcK21AiSc7nBEEo3+kH3vkqYfgu5Y1TLrI+ecvG2hJv0mxLDjHJ0lZrUNI4jDGVA/12IZWK5kXey+tYQ/3CopEeFh8svJZYRG9ja3o9Ks6IM5OX5A8zSD8oVQt+lYjLYJZIliKkNvBW6ye+OHXaqPjYkC/j7HRcFqZDBuj5GbSnXgGPUtn7OTT+ux8DIlN39pqrM5XuMtjfS6y1NmGnFqX3Zm3ENpYq6DT7n+HQgd5gnxp2oFsSgf5NsIzSnYcNc67umftCs6HGLCyBVykgycPZekdJPgwypWxg8HY88WMFxvZfuAwf8I8vSvJ5/MW7dYuYsiZLNx4E20hSf8C9KihlX5ItI5Nb3q90dMzDTCbiBIa0gNzB4uSlH+OKdMMHj/U4gnxLfat///hnwy9wAX70wHVdl8CRjn8ywOWY++EOeveFAEF/mx6eIHrfW+7LwMuSHLhHbjvkSgqgGXuuGqisT5AkD30pY+dOJa5r7mcsIKUOOQyh1wyAGfNjjACtOzu5bC9/uuZo/gqkcZIM+ia298hiwlnmHGKdyvIiSaHpQT40ZAoMLNGttLf4GUVhCbAAAA" alt=""></div>
@@ -522,7 +544,7 @@ function sheet({ title, text, items = [], cancel = "Kapat" }) {
 /* ================================================================ ayarlar (cihazda) */
 const SKEY = "aurora.settings.v1";
 const settings = Object.assign(
-  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192 },
+  { resume: true, autoNext: true, store: true, shuffle: false, repeat: "all", volume: 80, sort: "date", desc: true, speed: 1, last: "", mp3kbps: 192, ytKey: "", ytRecent: [], ytOnlyArtist: true },
   (() => { try { return JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch { return {}; } })()
 );
 const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch { /* depolama kapalı */ } };
@@ -573,13 +595,13 @@ const state = {
   current: null,
   url: null,
 };
-const save = (it) => { if (!it.sample) dbPutMeta(it); };
+const save = (it) => { if (!it.sample && it.type !== "youtube") dbPutMeta(it); };
 
 /* ================================================================ sekmeler */
 const TABS = [
   ["home", "Ana Sayfa", "home"], ["videos", "Videolar", "video"], ["music", "Müzikler", "music"],
   ["folders", "Klasörler", "folder"], ["favorites", "Favoriler", "heart"], ["recent", "Son Oynatılanlar", "clock"],
-  ["settings", "Ayarlar", "settings"],
+  ["youtube", "YouTube Müzik", "play"], ["settings", "Ayarlar", "settings"],
 ];
 $("tabs").innerHTML = TABS.map(([k, label, ico]) =>
   `<button class="tab${k === "settings" ? " purple" : ""}" role="tab" data-tab="${k}" aria-selected="false"><img class="ico" src="${I[ico]}" alt="">${label}</button>`
@@ -623,6 +645,7 @@ function currentList() {
     case "favorites": return sorted(filtered(all.filter((m) => m.fav)));
     case "recent": return filtered(all.filter((m) => m.lastPlayed)).sort((a, b) => b.lastPlayed - a.lastPlayed);
     case "queue": return state.order.map((i) => state.queue[i]).filter(Boolean);
+    case "youtube": return yt.results;
     case "folders": return state.folder ? sorted(filtered(all.filter((m) => m.folder === state.folder))) : [];
     default: {
       if (state.search.trim()) return sorted(filtered(all));
@@ -644,6 +667,7 @@ function folders() {
 }
 function subtitle(m) {
   const p = [];
+  if (m.type === "youtube") return [m.artist, m.duration ? fmt(m.duration) : ""].filter(Boolean).join("  •  ");
   if (m.type === "audio" && m.artist) p.push(m.artist);
   if (m.type === "video" && m.width) p.push(`${m.width} × ${m.height}`);
   if (m.folder) p.push(m.folder);
@@ -653,12 +677,18 @@ function subtitle(m) {
 
 function render() {
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
-  const titles = { home: "Son Eklenenler", videos: "Videolar", music: "Müzikler", folders: state.folder || "Klasörler", favorites: "Favoriler", recent: "Son Oynatılanlar", settings: "Ayarlar", queue: "Oynatma Sırası" };
+  const titles = { home: "Son Eklenenler", videos: "Videolar", music: "Müzikler", folders: state.folder || "Klasörler", favorites: "Favoriler", recent: "Son Oynatılanlar", settings: "Ayarlar", queue: "Oynatma Sırası", youtube: "YouTube Müzik" };
   $("libTitle").textContent = titles[state.tab];
   $("btnLibBack").hidden = !(state.tab === "queue" || (state.tab === "folders" && state.folder));
   $("btnSort").textContent = sortLabel();
   $("btnSort").hidden = ["settings", "recent", "queue"].includes(state.tab) || (state.tab === "folders" && !state.folder);
   const isSettings = state.tab === "settings";
+  if (state.tab === "youtube") {
+    $("settings").hidden = true; $("list").hidden = false; $("stats").hidden = true; $("btnSort").hidden = true;
+    $("libCount").textContent = yt.results.length ? `${yt.results.length} şarkı · ${yt.query}` : "Sanatçı arayın";
+    renderYT();
+    return;
+  }
   $("settings").hidden = !isSettings;
   $("list").hidden = isSettings;
   $("stats").hidden = !(state.tab === "home" && state.items.length && !state.search.trim());
@@ -682,7 +712,11 @@ function render() {
 
   const list = currentList();
   $("libCount").textContent = `${list.length} öğe`;
-  $("list").innerHTML = list.length ? list.map((m) => `
+  $("list").innerHTML = list.length ? rowsHtml(list) : emptyHtml();
+}
+
+function rowsHtml(list) {
+  return list.map((m) => `
     <div class="row${state.current === m ? " now" : ""}" data-id="${esc(m.id)}" role="button" tabindex="0">
       <span class="thumb" style="${m.thumb ? `background-image:url('${m.thumb}')` : ""}">
         ${m.thumb ? "" : `<img class="ico" src="${m.type === "video" ? I.video_small : I.note_small}" alt="">`}
@@ -690,9 +724,10 @@ function render() {
         ${hasProgress(m) ? `<span class="bar" style="width:${(m.pos / m.duration) * 100}%"></span>` : ""}
       </span>
       <span class="r-text"><span class="r-title">${esc(m.title)}</span><span class="r-sub">${esc(subtitle(m))}</span></span>
-      <button class="r-btn${m.fav ? " on" : ""}" data-fav="${esc(m.id)}" aria-label="${m.fav ? "Favorilerden çıkar" : "Favorilere ekle"}"><img class="ico" src="${m.fav ? I.heart_red : I.heart_outline}" alt=""></button>
+      ${m.type === "youtube" ? `<a class="r-btn" href="${ytmUrl(m)}" target="_blank" rel="noopener" aria-label="YouTube Music'te aç"><img class="ico" src="${I.cast}" alt=""></a>` :
+      `<button class="r-btn${m.fav ? " on" : ""}" data-fav="${esc(m.id)}" aria-label="${m.fav ? "Favorilerden çıkar" : "Favorilere ekle"}"><img class="ico" src="${m.fav ? I.heart_red : I.heart_outline}" alt=""></button>`}
       <button class="r-btn" data-more="${esc(m.id)}" aria-label="Seçenekler"><img class="ico" src="${I.more_horiz}" alt=""></button>
-    </div>`).join("") : emptyHtml();
+    </div>`).join("");
 }
 
 function emptyHtml() {
@@ -714,13 +749,14 @@ $("list").addEventListener("click", async (e) => {
   if (more) { e.stopPropagation(); itemMenu(find(more.dataset.more)); return; }
   const f = e.target.closest("[data-folder]");
   if (f) { state.folder = f.dataset.folder; render(); return; }
+  if (e.target.closest("a, form, .yt-actions, .yt-chips, #ytMore")) return;
   const row = e.target.closest("[data-id]");
   if (row) playFromList(find(row.dataset.id));
 });
 $("list").addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-id]")) { e.preventDefault(); playFromList(find(e.target.dataset.id)); }
 });
-const find = (id) => state.items.find((m) => m.id === id) || state.queue.find((m) => m.id === id);
+const find = (id) => state.items.find((m) => m.id === id) || state.queue.find((m) => m.id === id) || yt.results.find((m) => m.id === id);
 
 $("btnLibBack").onclick = () => {
   if (state.tab === "queue") selectTab(state.current?.type === "audio" ? "music" : "videos");
@@ -870,13 +906,86 @@ function prepare(m, list) {
   load(m, false);
 }
 
+/* ================================================================ YouTube oynatıcı */
+/* YouTube'un resmi gömülü oynatıcısı (IFrame API), video/ses öğesiyle aynı arayüzü sunacak şekilde sarılır;
+   böylece mevcut düğmeler, ilerleme çubuğu, sıra ve kilit ekranı bilgileri aynen çalışır. */
+let ytApiPromise = null;
+function loadYTApi() {
+  if (window.YT?.Player) return Promise.resolve();
+  ytApiPromise ??= new Promise((res, rej) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { prev?.(); res(); };
+    const sc = document.createElement("script");
+    sc.src = "https://www.youtube.com/iframe_api";
+    sc.onerror = () => { ytApiPromise = null; rej(new Error("yt-api")); };
+    document.head.appendChild(sc);
+    setTimeout(() => { if (!window.YT?.Player) { ytApiPromise = null; rej(new Error("yt-api")); } }, 15000);
+  });
+  return ytApiPromise;
+}
+class YTMedia extends EventTarget {
+  constructor() {
+    super();
+    this.id = "youtube"; this.player = null; this.ready = null; this._ended = false; this._timer = null;
+    this._rate = 1; this._vol = 0.8; this._muted = false; this.readyState = 4; this.videoWidth = 0; this.videoHeight = 0; this.lastError = 0;
+  }
+  ensure() {
+    this.ready ??= loadYTApi().then(() => new Promise((res) => {
+      this.player = new YT.Player("ytHost", {
+        width: "100%", height: "100%",
+        playerVars: { playsinline: 1, controls: 0, rel: 0, iv_load_policy: 3, fs: 0, disablekb: 1 },
+        events: {
+          onReady: () => { this._apply(); res(); },
+          onStateChange: (e) => this._state(e.data),
+          onError: (e) => { this.lastError = e.data; this.dispatchEvent(new Event("error")); },
+        },
+      });
+    })).catch((e) => { this.ready = null; throw e; });
+    return this.ready;
+  }
+  async loadVideo(id, autoplay) {
+    await this.ensure();
+    this._ended = false;
+    if (autoplay) this.player.loadVideoById(id); else this.player.cueVideoById(id);
+    this._apply();
+  }
+  _fire(t) { this.dispatchEvent(new Event(t)); }
+  _state(s) {
+    // -1 başlamadı · 0 bitti · 1 çalıyor · 2 duraklatıldı · 3 yükleniyor · 5 hazır
+    if (s === 1) { this._ended = false; this._fire("play"); this._fire("playing"); this._fire("durationchange"); this._fire("loadedmetadata"); this._tick(true); }
+    else if (s === 2) { this._tick(false); this._fire("pause"); }
+    else if (s === 3) this._fire("waiting");
+    else if (s === 0) { this._ended = true; this._tick(false); this._fire("pause"); this._fire("ended"); }
+    else if (s === 5) { this._fire("durationchange"); this._fire("canplay"); }
+  }
+  _tick(on) { clearInterval(this._timer); if (on) this._timer = setInterval(() => this._fire("timeupdate"), 500); }
+  _apply() { if (!this.player?.setVolume) return; this.player.setVolume(this._vol * 100); this._muted ? this.player.mute() : this.player.unMute(); this.player.setPlaybackRate(this._rate); }
+  play() { this.player?.playVideo?.(); return Promise.resolve(); }
+  pause() { this.player?.pauseVideo?.(); }
+  load() {}
+  removeAttribute() { try { this.player?.stopVideo?.(); } catch {} this._tick(false); }
+  get paused() { const st = this.player?.getPlayerState?.(); return st !== 1 && st !== 3; }
+  get ended() { return this._ended; }
+  get duration() { const d = this.player?.getDuration?.(); return d > 0 ? d : NaN; }
+  get currentTime() { return this.player?.getCurrentTime?.() || 0; }
+  set currentTime(t) { this.player?.seekTo?.(t, true); setTimeout(() => this._fire("timeupdate"), 50); }
+  get volume() { return this._vol; }
+  set volume(v) { this._vol = v; this.player?.setVolume?.(v * 100); }
+  get muted() { return this._muted; }
+  set muted(m) { this._muted = m; if (this.player?.mute) m ? this.player.mute() : this.player.unMute(); }
+  get playbackRate() { return this._rate; }
+  set playbackRate(r) { this._rate = r; this.player?.setPlaybackRate?.(r); }
+}
+const ytMedia = new YTMedia();
+
 function onMedia(ev, fn) {
-  [video, audioEl].forEach((el) => el.addEventListener(ev, (e) => { if (e.target === media) fn(e); }));
+  [video, audioEl, ytMedia].forEach((el) => el.addEventListener(ev, (e) => { if (e.target === media) fn(e); }));
 }
 
 let pendingResume = 0, pendingPlay = false;
 function load(m, autoplay) {
   saveProgress(true);
+  if (m.type === "youtube") { startYT(m, autoplay); return; }
   // Dosya hafızadaysa hiç beklemeden başlat: kilitli ekranda şarkı geçişinin çalışması için şart
   if (m.blob) start(m, m.blob, autoplay);
   else blobOf(m).then((blob) => {
@@ -908,6 +1017,19 @@ function start(m, blob, autoplay) {
   render();
   prefetchNext();
 }
+function startYT(m, autoplay) {
+  if (inFrame) { toast("YouTube şarkıları bu önizlemede çalmaz. GitHub adresindeki sürümü açın: trocki59-byte.github.io/AuroraMediaPlayer", 5000); return; }
+  if (media !== ytMedia) { media.pause(); media.removeAttribute("src"); media.load(); media = ytMedia; }
+  state.current = m;
+  pendingResume = 0; pendingPlay = autoplay;
+  ytMedia.volume = settings.volume / 100;
+  ytMedia.playbackRate = settings.speed;
+  if (autoplay) m.lastPlayed = Date.now();
+  updateNowPlaying();
+  render();
+  ytMedia.loadVideo(m.yt, autoplay).catch(() => toast("YouTube oynatıcısı yüklenemedi. İnternet bağlantınızı kontrol edin.", 4500));
+}
+
 /* Sıradaki parçayı veritabanından hafızaya al; bellek dolmasın diye yalnızca bir sonrakini tut */
 function prefetchNext() {
   if (!state.order.length) return;
@@ -918,7 +1040,7 @@ function prefetchNext() {
   if (nxt) keep.add(nxt);
   // Kalıcı kaydedilmiş, şu an gerekmeyen büyük dosyaları hafızadan bırak (veritabanında duruyorlar)
   for (const m of state.items) if (m.blob && m.persisted !== false && !m.sample && !keep.has(m) && m !== undefined && m.__fromDb) { m.blob = null; }
-  if (nxt && !nxt.blob) blobOf(nxt).then((b) => { if (b) nxt.__fromDb = true; });
+  if (nxt && !nxt.blob && nxt.type !== "youtube") blobOf(nxt).then((b) => { if (b) nxt.__fromDb = true; });
 }
 
 onMedia("loadedmetadata", () => {
@@ -940,6 +1062,13 @@ onMedia("ended", () => {
 });
 onMedia("error", () => {
   if (!state.current) return;
+  if (state.current.type === "youtube") {
+    const c = ytMedia.lastError;
+    const why = c === 101 || c === 150 ? "sahibi YouTube dışında oynatılmasına izin vermiyor" : c === 100 ? "kaldırılmış ya da gizli" : "oynatılamadı";
+    toast(`"${state.current.title}" ${why}. Sıradakine geçiliyor.`, 3500);
+    setTimeout(() => next(true), 1200);
+    return;
+  }
   toast(`Bu dosya bu tarayıcıda oynatılamıyor: ${state.current.name}. iPhone Safari MKV, AVI ve FLAC dosyalarını desteklemez; MP4, MOV, MP3 ya da M4A deneyin.`, 6000);
 });
 ["play", "pause", "waiting", "playing", "canplay"].forEach((ev) => onMedia(ev, updatePlayState));
@@ -1026,9 +1155,15 @@ function updatePlayState() {
 }
 function updateNowPlaying() {
   const m = state.current;
-  $("pName").textContent = m ? m.name : "Aurora Media Player";
+  $("pName").textContent = m ? (m.type === "youtube" ? `${m.title} — ${m.artist}` : m.name) : "Aurora Media Player";
   const isAudio = m && m.type === "audio";
-  $("art").hidden = !!(m && m.type === "video");
+  const isYT = m && m.type === "youtube";
+  $("art").hidden = !!(m && m.type !== "audio");
+  $("ytWrap").hidden = !isYT;
+  $("video").hidden = !!isYT;
+  // YouTube kuralı: oynatıcının üstü kapatılmaz; dokunuşlar doğrudan YouTube oynatıcısına gider
+  $("touch").hidden = !!isYT;
+  document.querySelector(".side").hidden = !!isYT;
   $("artAudio").hidden = !isAudio;
   $("artEmpty").hidden = !!m;
   if (isAudio) {
@@ -1043,7 +1178,7 @@ function updateNowPlaying() {
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: m.title, artist: m.artist || "Aurora Media Player", album: m.folder,
-        artwork: [{ src: m.thumb || I.mark, sizes: "320x180", type: m.thumb ? "image/jpeg" : "image/webp" }],
+        artwork: [{ src: m.thumb || I.mark, sizes: m.type === "youtube" ? "480x360" : "320x180", type: m.thumb ? "image/jpeg" : "image/webp" }],
       });
     } catch {}
   }
@@ -1087,11 +1222,11 @@ $("seek").addEventListener("change", (e) => {
   seeking = false;
 });
 $("vol").addEventListener("input", (e) => {
-  settings.volume = +e.target.value; video.volume = audioEl.volume = settings.volume / 100;
-  if (settings.volume > 0) video.muted = audioEl.muted = false;
+  settings.volume = +e.target.value; video.volume = audioEl.volume = ytMedia.volume = settings.volume / 100;
+  if (settings.volume > 0) video.muted = audioEl.muted = ytMedia.muted = false;
   saveSettings(); updateModes();
 });
-$("btnMute").onclick = () => { const m = !media.muted; video.muted = audioEl.muted = m; updateModes(); };
+$("btnMute").onclick = () => { const m = !media.muted; video.muted = audioEl.muted = ytMedia.muted = m; updateModes(); };
 $("btnFav").onclick = () => state.current && toggleFav(state.current);
 $("btnQueue").onclick = () => { exitFull(); state.tab = "queue"; state.folder = null; render(); $("library").scrollIntoView({ behavior: "smooth", block: "start" }); };
 $("btnMore").onclick = playerMenu;
@@ -1203,6 +1338,17 @@ function showInfo(m) {
 }
 async function itemMenu(m) {
   if (!m) return;
+  if (m.type === "youtube") {
+    const v = await sheet({ title: m.title, text: m.artist, items: [
+      { label: "Çal", value: "play" }, { label: "Sıradaki olarak ekle", value: "nextup" },
+      { label: "YouTube Music'te aç", value: "ytm" }, { label: `"${m.artist}" şarkılarını ara`, value: "artist" },
+    ] });
+    if (v === "play") playFromList(m);
+    else if (v === "nextup") playNextUp(m);
+    else if (v === "ytm") openExternal(ytmUrl(m));
+    else if (v === "artist") ytRun(m.artist);
+    return;
+  }
   const v = await sheet({ title: m.title, items: [
     { label: "Oynat", value: "play" },
     { label: m.fav ? "Favorilerden çıkar" : "Favorilere ekle", value: "fav" },
@@ -1240,7 +1386,7 @@ $("btnMenu").onclick = async () => {
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.2\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 1.3\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1261,6 +1407,14 @@ async function renderSettings() {
       <button class="btn" id="setAdd">Dosya ekle</button>
       <button class="btn" id="setThumbs">Küçük resimleri yenile</button>
     </div>
+    <h4>YOUTUBE MÜZİK</h4>
+    <div class="set" style="display:grid;gap:10px"><div><b>YouTube API anahtarı</b><small>Sanatçı aramak için gerekli. Yalnızca bu cihazda saklanır, hiçbir yere gönderilmez (YouTube'a yapılan aramalar dışında).</small></div>
+      <div class="yt-form"><label class="sr" for="ytKey">YouTube API anahtarı</label>
+        <input id="ytKey" type="password" placeholder="AIza…" value="${esc(settings.ytKey || "")}" autocomplete="off" spellcheck="false">
+        <button class="add-btn" id="ytKeySave" type="button">Kaydet</button></div>
+      <small>Google Cloud Console › API'ler ve Hizmetler › Kimlik bilgileri. "YouTube Data API v3" etkin olmalı. Güvenlik için anahtarı yalnızca <b>trocki59-byte.github.io</b> adresiyle kısıtlayın.</small>
+    </div>
+    ${sw("ytOnlyArtist", "Yalnızca o sanatçının şarkıları", "Sonuçlardan başka sanatçılara ait videoları ayıklar")}
     <h4>MP3 DÖNÜŞTÜRME</h4>
     <div class="set" style="display:grid;gap:10px"><div><b>MP3 kalitesi</b><small>Yüksek kalite daha büyük dosya demektir. 192 kbps çoğu kulaklık için yeterlidir.</small></div>
       <div class="seg" id="kbpsSeg">${[128, 192, 320].map((k) => `<button data-kbps="${k}" aria-pressed="${settings.mp3kbps === k}">${k} kbps</button>`).join("")}</div>
@@ -1276,8 +1430,12 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.2 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
-  ["resume", "autoNext", "store"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 1.3 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+  $("ytKeySave").onclick = () => {
+    settings.ytKey = $("ytKey").value.trim(); saveSettings();
+    toast(settings.ytKey ? "Anahtar kaydedildi. YouTube Müzik sekmesinden sanatçı arayabilirsiniz." : "Anahtar silindi.");
+  };
+  ["resume", "autoNext", "store", "ytOnlyArtist"].forEach((k) => $(k).addEventListener("change", (e) => { settings[k] = e.target.checked; saveSettings(); }));
   $("setAdd").onclick = addFiles;
   $("setConvert").onclick = pickAndConvert;
   $("kbpsSeg").querySelectorAll("[data-kbps]").forEach((b) => (b.onclick = () => {
@@ -1302,6 +1460,160 @@ async function renderSettings() {
     if (est && $("usage")) $("usage").textContent = `${fmtSize(est.usage || 0)} kullanılıyor · yaklaşık ${fmtSize(est.quota || 0)} kullanılabilir`;
     else if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`;
   } catch { if ($("usage")) $("usage").textContent = `${persisted} dosya saklanıyor`; }
+}
+
+/* ================================================================ YouTube Müzik */
+/* Arama: YouTube Data API v3 (anahtar yalnızca bu cihazda saklanır). Çalma: YouTube'un resmi gömülü oynatıcısı.
+   Premium'un arka planda çalma ve indirme özellikleri yalnızca YouTube Music uygulamasındadır; oraya derin bağlantı verilir. */
+const inFrame = (() => { try { return window.top !== window; } catch { return true; } })();
+const yt = { query: "", results: [], next: null, loading: false, error: "" };
+const ytmSearchUrl = (q) => `https://music.youtube.com/search?q=${encodeURIComponent(q)}`;
+const ytmUrl = (m) => `https://music.youtube.com/watch?v=${encodeURIComponent(m.yt)}`;
+function openExternal(url) { const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); }
+const isoDur = (s) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(s || ""); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; };
+const decodeHtml = (s) => { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; };
+
+async function ytApi(path, params) {
+  const url = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
+  Object.entries({ ...params, key: settings.ytKey }).forEach(([k, v]) => v != null && url.searchParams.set(k, v));
+  const r = await fetch(url);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const reason = j?.error?.errors?.[0]?.reason || "";
+    if (reason === "quotaExceeded" || reason === "dailyLimitExceeded") throw new Error("Bugünkü YouTube arama hakkı doldu. Yarın yeniden deneyin ya da YouTube Music'te açın.");
+    if (reason === "keyInvalid" || r.status === 400) throw new Error("YouTube API anahtarı geçersiz. Ayarlar'dan kontrol edin.");
+    if (r.status === 403) throw new Error("Anahtar bu siteden kullanılamıyor. Google Cloud'da anahtarın kısıtlamalarına bu adresi ekleyin ve YouTube Data API v3'ün etkin olduğundan emin olun.");
+    throw new Error("YouTube'a ulaşılamadı. İnternet bağlantınızı kontrol edin.");
+  }
+  return j;
+}
+
+/* Bir sanatçının şarkıları: Müzik kategorisinde arar, süreleri alır, kısa videoları ve çok uzun derlemeleri ayıklar */
+async function ytSearchArtist(artist, pageToken) {
+  const s = await ytApi("search", { part: "snippet", type: "video", videoCategoryId: "10", maxResults: "50", q: artist, pageToken, regionCode: "TR", relevanceLanguage: "tr" });
+  const ids = (s.items || []).map((i) => i.id?.videoId).filter(Boolean);
+  if (!ids.length) return { items: [], next: null };
+  const v = await ytApi("videos", { part: "contentDetails,snippet,status", id: ids.join(",") });
+  const q = lower(artist);
+  let items = (v.items || [])
+    .filter((x) => x.status?.embeddable !== false)
+    .map((x) => {
+      const sn = x.snippet || {};
+      const ch = (sn.channelTitle || "").replace(/ - Topic$/i, "").replace(/VEVO$/i, "").trim();
+      return {
+        id: `yt:${x.id}`, yt: x.id, type: "youtube",
+        title: decodeHtml(sn.title || ""), name: decodeHtml(sn.title || ""), artist: ch,
+        thumb: sn.thumbnails?.high?.url || sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || null,
+        duration: isoDur(x.contentDetails?.duration), folder: artist, size: 0, added: Date.now(), pos: 0, plays: 0, lastPlayed: 0,
+      };
+    })
+    .filter((m) => m.duration >= 60 && m.duration <= 15 * 60);
+  if (settings.ytOnlyArtist) {
+    const strict = items.filter((m) => lower(m.artist).includes(q) || lower(m.title).includes(q));
+    if (strict.length >= 3) items = strict;
+  }
+  return { items, next: s.nextPageToken || null };
+}
+
+function ytRemember(q) {
+  settings.ytRecent = [q, ...(settings.ytRecent || []).filter((x) => lower(x) !== lower(q))].slice(0, 12);
+  saveSettings();
+}
+
+/* "Tarkan" ya da birden çok sanatçı: "Tarkan, Sezen Aksu, Barış Manço" */
+async function ytRun(query, more = false) {
+  query = (query || "").trim();
+  if (!query) return;
+  if (state.tab !== "youtube") { state.tab = "youtube"; state.folder = null; }
+  if (!settings.ytKey) { yt.query = query; yt.error = ""; render(); toast("Önce Ayarlar'dan YouTube API anahtarını girin."); return; }
+  if (inFrame) { toast("YouTube araması bu önizlemede çalışmaz. GitHub adresindeki sürümü açın: trocki59-byte.github.io/AuroraMediaPlayer", 5000); return; }
+  const artists = query.split(/[,;]+/).map((x) => x.trim()).filter(Boolean).slice(0, 5);
+  yt.loading = true; yt.error = "";
+  if (!more) { yt.query = query; yt.results = []; yt.next = null; }
+  render();
+  try {
+    if (artists.length > 1 && !more) {
+      const all = await Promise.all(artists.map((a) => ytSearchArtist(a).then((r) => r.items).catch(() => [])));
+      // Sanatçıları dönüşümlü sırala, sonra karıştırılabilir
+      const merged = [];
+      for (let i = 0; i < Math.max(...all.map((l) => l.length)); i++) all.forEach((l) => l[i] && merged.push(l[i]));
+      yt.results = dedupe(merged);
+      yt.next = null;
+    } else {
+      const r = await ytSearchArtist(more ? yt.query : query, more ? yt.next : undefined);
+      yt.results = dedupe([...yt.results, ...r.items]);
+      yt.next = r.next;
+    }
+    ytRemember(query);
+    if (!yt.results.length) yt.error = "Şarkı bulunamadı. Adı farklı yazmayı deneyin.";
+  } catch (e) {
+    yt.error = e.message;
+  } finally {
+    yt.loading = false;
+    render();
+  }
+}
+function dedupe(list) {
+  const seen = new Set();
+  return list.filter((m) => { const k = lower(m.title).replace(/\(.*?\)|\[.*?\]/g, "").replace(/official|video|audio|lyrics?|klip|resmi/gi, "").replace(/\s+/g, " ").trim(); if (seen.has(m.yt) || seen.has(k)) return false; seen.add(m.yt); seen.add(k); return true; });
+}
+
+function ytPlayAll(shuffle) {
+  if (!yt.results.length) return;
+  settings.shuffle = !!shuffle; saveSettings(); updateModes();
+  const list = [...yt.results];
+  const startIdx = shuffle ? Math.floor(Math.random() * list.length) : 0;
+  state.queue = list;
+  rebuildOrder(startIdx);
+  load(list[startIdx], true);
+  toast(shuffle ? `Mix başladı: ${list.length} şarkı karışık sırayla` : `${list.length} şarkı sırayla çalınıyor`, 2200);
+}
+function playNextUp(m) {
+  if (!state.current) { playFromList(m); return; }
+  if (!state.queue.includes(m)) state.queue.push(m);
+  const qi = state.queue.indexOf(m);
+  state.order = state.order.filter((i) => i !== qi);
+  state.order.splice(state.pos + 1, 0, qi);
+  toast("Sıradaki olarak eklendi.", 1600);
+}
+
+function renderYT() {
+  const recent = (settings.ytRecent || []).map((q) => `<button data-ytq="${esc(q)}">${esc(q)}</button>`).join("");
+  const keyMissing = !settings.ytKey;
+  let body = "";
+  if (inFrame) {
+    body = `<div class="yt-card"><b>Bu bölüm GitHub sürümünde çalışır</b><p class="yt-note">Bu önizleme sayfası YouTube'a bağlanamıyor. Aurora'yı şu adresten açın: <b>trocki59-byte.github.io/AuroraMediaPlayer</b></p></div>`;
+  } else if (keyMissing) {
+    body = `<div class="yt-card"><b>YouTube API anahtarı gerekli</b>
+      <p class="yt-note">Şarkıları Aurora'nın içinde listelemek için Ayarlar › YouTube Müzik bölümüne anahtarınızı girin. Anahtar yalnızca bu cihazda saklanır.</p>
+      <button class="btn" data-tab="settings">Ayarlar'a git</button></div>`;
+  }
+  if (yt.loading) body += `<div class="empty"><div class="spinner" style="position:static;margin:0"></div><p>"${esc(yt.query)}" aranıyor…</p></div>`;
+  else if (yt.error) body += `<div class="yt-card"><b>Olmadı</b><p class="yt-note">${esc(yt.error)}</p></div>`;
+  const results = !yt.loading && yt.results.length ? `
+    <div class="yt-actions">
+      <button class="btn" id="ytAll">▶ Sırayla çal</button>
+      <button class="btn" id="ytMix">⤮ Mix (karışık)</button>
+      <a class="btn ext-link" href="${ytmSearchUrl(yt.query)}" target="_blank" rel="noopener" style="text-align:center">YouTube Music'te aç</a>
+    </div>
+    <div class="list" style="padding:0;overflow:visible">${rowsHtml(yt.results)}</div>
+    ${yt.next ? `<button class="btn" id="ytMore">Daha fazla şarkı getir</button>` : ""}
+    <p class="yt-note">Şarkılar YouTube'un kendi oynatıcısıyla çalar. iPhone'da ekran kilitlenince YouTube çalmayı durdurur; arka planda ve reklamsız dinlemek için <b>YouTube Music'te aç</b> ile Premium uygulamanıza geçin.</p>` : "";
+  $("list").innerHTML = `<div class="yt">
+    <form class="yt-form" id="ytForm" autocomplete="off">
+      <label class="sr" for="ytQ">Sanatçı</label>
+      <input id="ytQ" type="search" placeholder="Sanatçı adı · birden çok için virgül: Tarkan, Sezen Aksu" value="${esc(yt.query)}" enterkeyhint="search">
+      <button class="add-btn" type="submit">Ara</button>
+    </form>
+    ${recent ? `<div class="yt-chips" aria-label="Son aramalar">${recent}</div>` : ""}
+    ${yt.query && (keyMissing || inFrame) ? `<a class="btn ext-link" href="${ytmSearchUrl(yt.query)}" target="_blank" rel="noopener" style="text-align:center">"${esc(yt.query)}" — YouTube Music'te aç</a>` : ""}
+    ${body}${results}
+  </div>`;
+  $("ytForm").onsubmit = (e) => { e.preventDefault(); const q = $("ytQ").value.trim(); if (!q) return; if (settings.ytKey && !inFrame) ytRun(q); else { yt.query = q; render(); } };
+  $("list").querySelectorAll("[data-ytq]").forEach((b) => (b.onclick = () => ytRun(b.dataset.ytq)));
+  $("ytAll") && ($("ytAll").onclick = () => ytPlayAll(false));
+  $("ytMix") && ($("ytMix").onclick = () => ytPlayAll(true));
+  $("ytMore") && ($("ytMore").onclick = () => ytRun(yt.query, true));
 }
 
 /* ================================================================ MP3 dönüştürme */
