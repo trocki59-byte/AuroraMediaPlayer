@@ -16,6 +16,9 @@ on:
   push:
     branches: [ main, master ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-26
@@ -56,6 +59,35 @@ jobs:
             grep -E "error|Error|ERROR" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           }
+
+      # Apple Developer hesabı olmadan: imzasız .ipa üret → Windows'ta Sideloadly ile
+      # kendi (ücretsiz) Apple ID'nizle imzalayıp iPhone'a kurun.
+      - name: İmzasız .ipa (Sideloadly için)
+        if: env.IOS_P12_BASE64 == ''
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish AuroraMediaPlayer.csproj -f net10.0-ios -c Release -p:AuroraTarget=ios \
+            -p:RuntimeIdentifier=ios-arm64 -p:EnableCodeSigning=false -p:BuildIpa=true \
+            -p:ValidateXcodeVersion=false -p:MtouchLink=SdkOnly -o cikti_ios 2>&1 | tee ipa.log || {
+            grep -E "error|Error" ipa.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
+          ls -la cikti_ios
+
+      - name: .ipa'yı GitHub sürümüne ekle
+        if: env.IOS_P12_BASE64 == '' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="v$(grep -oE '<ApplicationDisplayVersion>[^<]+' AuroraMediaPlayer.csproj | sed 's/.*>//')"
+          IPA=$(ls cikti_ios/*.ipa | head -1)
+          cp "$IPA" "AuroraMediaPlayer-$VER-iphone-imzasiz.ipa"
+          # Android iş akışı sürümü oluşturana kadar bekle (en fazla 20 dk)
+          for i in $(seq 1 40); do gh release view "$VER" >/dev/null 2>&1 && break; sleep 30; done
+          gh release view "$VER" >/dev/null 2>&1 || gh release create "$VER" --target "$GITHUB_SHA" --title "TROÇKİ® AURORA MEDIA PLAYER $VER" --notes "Sen İzle, Dünya Güzelleşsin…"
+          gh release upload "$VER" "AuroraMediaPlayer-$VER-iphone-imzasiz.ipa" --clobber
 
       - name: Sertifika ve profili yükle
         if: env.IOS_P12_BASE64 != ''
