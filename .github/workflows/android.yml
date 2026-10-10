@@ -1,0 +1,35 @@
+# Bilgisayarda kurulum yapmadan APK almak için:
+# Projeyi GitHub'a yükleyin → Actions sekmesi → "Android APK" → Run workflow
+# Bitince "Artifacts" bölümünden AuroraMediaPlayer-apk dosyasını indirin.
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+
+      - name: MAUI Android iş yükü
+        run: dotnet workload install maui-android
+
+      - name: APK derle
+        run: dotnet publish AuroraMediaPlayer.csproj -f net10.0-android -c Release -p:AuroraTarget=android -p:AndroidPackageFormats=apk -o cikti
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuroraMediaPlayer-apk
+          path: cikti/*-Signed.apk

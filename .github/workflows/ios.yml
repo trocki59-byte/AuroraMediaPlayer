@@ -1,0 +1,72 @@
+# iPhone sürümü — Mac'iniz olmadan GitHub'ın Mac bilgisayarlarında derlenir.
+#
+# 1) Her çalıştırmada "derleme kontrolü" yapılır (imzasız, simülatör için) → kod hatası var mı görülür.
+# 2) İmzalı .ipa (iPhone'a kurulum / TestFlight / App Store) için Apple Developer hesabı gerekir.
+#    GitHub › Settings › Secrets and variables › Actions bölümüne şu gizli değerleri ekleyin:
+#      IOS_P12_BASE64          Apple Distribution sertifikası (.p12) — base64
+#      IOS_P12_PASSWORD        .p12 şifresi
+#      IOS_PROFILE_BASE64      Provisioning profile (.mobileprovision) — base64
+#      IOS_CODESIGN_KEY        Sertifika adı, ör: "Apple Distribution: Sabahattin ... (TEAMID)"
+#      IOS_PROFILE_NAME        Provisioning profile adı
+#    Bu değerler varsa .ipa da üretilir ve Artifacts bölümünden indirilebilir.
+name: iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: En güncel Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: MAUI iOS iş yükü
+        run: dotnet workload install maui-ios
+
+      - name: Derleme kontrolü (simülatör, imzasız)
+        run: dotnet build AuroraMediaPlayer.csproj -f net10.0-ios -c Debug -p:AuroraTarget=ios -p:RuntimeIdentifier=iossimulator-arm64
+
+      - name: Sertifika ve profili yükle
+        if: env.IOS_P12_BASE64 != ''
+        env:
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/aurora.keychain-db
+          KPASS=$(uuidgen)
+          echo "$IOS_P12_BASE64" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security create-keychain -p "$KPASS" $KEYCHAIN
+          security set-keychain-settings -lut 21600 $KEYCHAIN
+          security unlock-keychain -p "$KPASS" $KEYCHAIN
+          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN
+          security set-key-partition-list -S apple-tool:,apple: -k "$KPASS" $KEYCHAIN
+          security list-keychain -d user -s $KEYCHAIN
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/aurora.mobileprovision
+
+      - name: İmzalı .ipa üret
+        if: env.IOS_P12_BASE64 != ''
+        run: >
+          dotnet publish AuroraMediaPlayer.csproj -f net10.0-ios -c Release -p:AuroraTarget=ios
+          -p:CodesignKey="${{ secrets.IOS_CODESIGN_KEY }}"
+          -p:CodesignProvision="${{ secrets.IOS_PROFILE_NAME }}"
+          -o cikti_ios
+
+      - uses: actions/upload-artifact@v4
+        if: env.IOS_P12_BASE64 != ''
+        with:
+          name: AuroraMediaPlayer-ipa
+          path: cikti_ios/*.ipa

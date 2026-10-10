@@ -1,0 +1,900 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+	TROÇKİ® AURORA MEDIA PLAYER — ana ekran
+	Üst: aurora manzaralı logo başlığı + arama / menü
+	Orta: cam kart sekmeler (Ana Sayfa … Ayarlar)
+	Alt: oynatıcı kartı + kütüphane listesi (tablet yatayda yan yana, telefonda alt alta)
+-->
+<ContentPage
+	x:Class="AuroraMediaPlayer.MainPage"
+	xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+	xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+	xmlns:vm="clr-namespace:AuroraMediaPlayer.ViewModels"
+	xmlns:m="clr-namespace:AuroraMediaPlayer.Models"
+	xmlns:v="clr-namespace:AuroraMediaPlayer.Views"
+	x:DataType="vm:MainViewModel"
+	BackgroundColor="{StaticResource BgDeep}"
+	SafeAreaEdges="None"
+	NavigationPage.HasNavigationBar="False"
+	Shell.NavBarIsVisible="False">
+
+	<Grid x:Name="RootGrid" SafeAreaEdges="None">
+
+		<!-- ================= Arka plan: aurora manzarası ================= -->
+		<Image
+			x:Name="HeaderBackground"
+			Aspect="AspectFill"
+			VerticalOptions="Start"
+			HeightRequest="330"
+			InputTransparent="True" />
+		<BoxView
+			x:Name="HeaderFadeBox"
+			VerticalOptions="Start"
+			HeightRequest="331"
+			Background="{StaticResource HeaderFade}"
+			InputTransparent="True" />
+
+		<!-- ================= İçerik ================= -->
+		<Grid
+			x:Name="ShellGrid"
+			SafeAreaEdges="Container"
+			RowDefinitions="Auto,Auto,*"
+			RowSpacing="12"
+			Padding="16,6,16,12">
+
+			<!-- ═ Başlık: logo + arama + menü ═ -->
+			<Grid
+				x:Name="HeaderGrid"
+				Grid.Row="0"
+				ColumnDefinitions="*,Auto,Auto"
+				ColumnSpacing="12">
+				<Image
+					x:Name="LogoImage"
+					Source="logo_full.png"
+					Aspect="AspectFit"
+					HorizontalOptions="Start"
+					VerticalOptions="Center"
+					HeightRequest="118" />
+				<ImageButton
+					Grid.Column="1"
+					Style="{StaticResource GlassCircleButton}"
+					Source="ic_search.png"
+					VerticalOptions="Start"
+					Margin="0,8,0,0"
+					SemanticProperties.Description="Ara"
+					Clicked="OnSearchClicked" />
+				<ImageButton
+					Grid.Column="2"
+					Style="{StaticResource GlassCircleButton}"
+					Source="ic_more_vert.png"
+					VerticalOptions="Start"
+					Margin="0,8,0,0"
+					SemanticProperties.Description="Menü"
+					Clicked="OnMenuClicked" />
+			</Grid>
+
+			<!-- ═ Sekmeler ═ -->
+			<ScrollView
+				x:Name="NavScroll"
+				Grid.Row="1"
+				Orientation="Horizontal"
+				HorizontalScrollBarVisibility="Never">
+				<Grid
+					x:Name="NavGrid"
+					ColumnDefinitions="*,*,*,*,*,*,*"
+					ColumnSpacing="10"
+					Padding="2,6,2,10">
+					<v:NavTabButton
+						Grid.Column="0"
+						Icon="ic_home.png"
+						Text="Ana Sayfa"
+						IsSelected="{Binding IsHomeTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Home" />
+					<v:NavTabButton
+						Grid.Column="1"
+						Icon="ic_video.png"
+						Text="Videolar"
+						IsSelected="{Binding IsVideosTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Videos" />
+					<v:NavTabButton
+						Grid.Column="2"
+						Icon="ic_music.png"
+						Text="Müzikler"
+						IsSelected="{Binding IsMusicTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Music" />
+					<v:NavTabButton
+						Grid.Column="3"
+						Icon="ic_folder.png"
+						Text="Klasörler"
+						IsSelected="{Binding IsFoldersTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Folders" />
+					<v:NavTabButton
+						Grid.Column="4"
+						Icon="ic_heart.png"
+						Text="Favoriler"
+						IsSelected="{Binding IsFavoritesTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Favorites" />
+					<v:NavTabButton
+						Grid.Column="5"
+						Icon="ic_clock.png"
+						Text="Son Oynatılanlar"
+						IsSelected="{Binding IsRecentTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Recent" />
+					<v:NavTabButton
+						Grid.Column="6"
+						Icon="ic_settings.png"
+						Text="Ayarlar"
+						UsePurpleAccent="True"
+						IsSelected="{Binding IsSettingsTab}"
+						Command="{Binding SelectTabCommand}"
+						CommandParameter="Settings" />
+				</Grid>
+			</ScrollView>
+
+			<!-- ═ Oynatıcı + Kütüphane ═ -->
+			<Grid
+				x:Name="ContentGrid"
+				Grid.Row="2"
+				ColumnSpacing="14"
+				RowSpacing="12">
+
+				<!-- ================= OYNATICI KARTI ================= -->
+				<Border
+					x:Name="PlayerCard"
+					Background="{StaticResource CardFill}"
+					Stroke="{StaticResource CardStroke}"
+					StrokeThickness="1.5"
+					StrokeShape="RoundRectangle 22"
+					Padding="0">
+					<Border.Shadow>
+						<Shadow Brush="#3B7BFF" Opacity="0.35" Radius="22" Offset="0,0" />
+					</Border.Shadow>
+
+					<Grid
+						x:Name="PlayerGrid"
+						RowDefinitions="Auto,*,Auto,Auto,Auto"
+						ColumnDefinitions="*,Auto">
+
+						<!-- Video alanı -->
+						<Grid
+							x:Name="VideoArea"
+							Grid.Row="1"
+							Grid.ColumnSpan="2"
+							BackgroundColor="Black"
+							Margin="8,0">
+
+							<toolkit:MediaElement
+								x:Name="MediaPlayer"
+								ShouldShowPlaybackControls="False"
+								Aspect="AspectFit"
+								BackgroundColor="Black" />
+
+							<!-- Müzik / boş durum görseli -->
+							<Grid
+								x:Name="ArtLayer"
+								IsVisible="{Binding Player.IsVideo, Converter={StaticResource Not}}"
+								InputTransparent="True">
+								<Image x:Name="ArtBackground" Aspect="AspectFill" />
+								<BoxView Background="{StaticResource ArtFade}" />
+								<HorizontalStackLayout
+									HorizontalOptions="Center"
+									VerticalOptions="Center"
+									Spacing="18"
+									IsVisible="{Binding Player.IsAudio}">
+									<Border
+										WidthRequest="132"
+										HeightRequest="132"
+										StrokeShape="RoundRectangle 18"
+										Stroke="#664BC8FF"
+										StrokeThickness="1.5"
+										BackgroundColor="#CC0B1434">
+										<Border.Shadow>
+											<Shadow Brush="#B04BFF" Opacity="0.6" Radius="24" />
+										</Border.Shadow>
+										<Image Source="{Binding Player.ArtworkPath}" Aspect="AspectFill" />
+									</Border>
+									<VerticalStackLayout VerticalOptions="Center" MaximumWidthRequest="320" Spacing="2">
+										<Label
+											Text="{Binding Player.Current.Title, FallbackValue=''}"
+											FontFamily="PoppinsBold"
+											FontSize="20"
+											MaxLines="2"
+											LineBreakMode="TailTruncation" />
+										<Label
+											Text="{Binding Player.Artist}"
+											Style="{StaticResource CaptionLabel}"
+											FontSize="14"
+											MaxLines="1"
+											LineBreakMode="TailTruncation" />
+										<Label
+											Text="{Binding Player.Current.Album, FallbackValue=''}"
+											TextColor="{StaticResource TextDim}"
+											FontSize="12"
+											MaxLines="1"
+											LineBreakMode="TailTruncation" />
+									</VerticalStackLayout>
+								</HorizontalStackLayout>
+							</Grid>
+
+							<!-- Dokunma katmanı: tek dokunuş = kontrolleri göster/gizle, çift dokunuş = ±10 sn -->
+							<BoxView x:Name="TouchLayer" Color="Transparent">
+								<BoxView.GestureRecognizers>
+									<TapGestureRecognizer NumberOfTapsRequired="2" Tapped="OnVideoDoubleTapped" />
+									<TapGestureRecognizer NumberOfTapsRequired="1" Tapped="OnVideoTapped" />
+								</BoxView.GestureRecognizers>
+							</BoxView>
+
+							<!-- Çift dokunuş geri bildirimi -->
+							<Label
+								x:Name="SeekToast"
+								Opacity="0"
+								HorizontalOptions="Center"
+								VerticalOptions="Center"
+								FontFamily="PoppinsBold"
+								FontSize="22"
+								InputTransparent="True" />
+
+							<ActivityIndicator
+								IsRunning="{Binding Player.IsBuffering}"
+								IsVisible="{Binding Player.IsBuffering}"
+								WidthRequest="54"
+								HeightRequest="54"
+								HorizontalOptions="Center"
+								VerticalOptions="Center"
+								InputTransparent="True" />
+
+							<!-- Ortadaki büyük oynat butonu -->
+							<ImageButton
+								x:Name="CenterPlayButton"
+								Source="ic_play.png"
+								IsVisible="{Binding Player.ShowCenterPlay}"
+								WidthRequest="92"
+								HeightRequest="92"
+								CornerRadius="46"
+								Padding="28,26,22,26"
+								BackgroundColor="#8C0B1440"
+								BorderColor="#B3FFFFFF"
+								BorderWidth="2"
+								HorizontalOptions="Center"
+								VerticalOptions="Center"
+								SemanticProperties.Description="Oynat"
+								Clicked="OnPlayPauseClicked">
+								<ImageButton.Shadow>
+									<Shadow Brush="#2FE3FF" Opacity="0.6" Radius="20" />
+								</ImageButton.Shadow>
+							</ImageButton>
+
+							<!-- Sağ dikey butonlar: favori, sıra, daha fazla -->
+							<VerticalStackLayout
+								x:Name="SideButtons"
+								HorizontalOptions="End"
+								VerticalOptions="Center"
+								Spacing="12"
+								Margin="0,0,12,0">
+								<ImageButton
+									Style="{StaticResource GlassCircleButton}"
+									Source="{Binding Player.FavoriteIcon}"
+									WidthRequest="50"
+									HeightRequest="50"
+									CornerRadius="25"
+									SemanticProperties.Description="Favori"
+									Clicked="OnFavoriteClicked" />
+								<ImageButton
+									Style="{StaticResource GlassCircleButton}"
+									Source="ic_list.png"
+									WidthRequest="50"
+									HeightRequest="50"
+									CornerRadius="25"
+									SemanticProperties.Description="Oynatma sırası"
+									Clicked="OnQueueClicked" />
+								<ImageButton
+									Style="{StaticResource GlassCircleButton}"
+									Source="ic_more_horiz.png"
+									WidthRequest="50"
+									HeightRequest="50"
+									CornerRadius="25"
+									SemanticProperties.Description="Diğer seçenekler"
+									Clicked="OnPlayerMoreClicked" />
+							</VerticalStackLayout>
+						</Grid>
+
+						<!-- Tam ekranda alt kontrollerin arkasındaki karartma -->
+						<BoxView
+							x:Name="BottomFade"
+							Grid.Row="2"
+							Grid.RowSpan="3"
+							Grid.ColumnSpan="2"
+							Background="{StaticResource ChromeBottomFade}"
+							IsVisible="False"
+							InputTransparent="True" />
+
+						<!-- Başlık çubuğu: dosya adı | çözünürlük | süre -->
+						<Grid
+							x:Name="TitleBar"
+							Grid.Row="0"
+							Grid.ColumnSpan="2"
+							ColumnDefinitions="*,Auto"
+							ColumnSpacing="10"
+							Padding="18,12,18,10">
+							<Label
+								x:Name="TitleLabel"
+								Text="{Binding Player.Title}"
+								FontFamily="PoppinsMedium"
+								FontSize="16"
+								MaxLines="1"
+								LineBreakMode="TailTruncation"
+								VerticalOptions="Center" />
+							<Label
+								x:Name="InfoLabel"
+								Grid.Column="1"
+								Text="{Binding Player.InfoText}"
+								FontFamily="Poppins"
+								FontSize="14"
+								TextColor="{StaticResource TextPrimary}"
+								VerticalOptions="Center" />
+						</Grid>
+
+						<!-- İlerleme -->
+						<Grid
+							x:Name="ProgressRow"
+							Grid.Row="2"
+							Grid.ColumnSpan="2"
+							ColumnDefinitions="Auto,*,Auto"
+							ColumnSpacing="8"
+							Padding="16,8,16,0">
+							<Label Text="{Binding Player.PositionText}" Style="{StaticResource TimeLabel}" />
+							<Slider
+								x:Name="ProgressSlider"
+								Grid.Column="1"
+								Minimum="0"
+								Maximum="1"
+								VerticalOptions="Center"
+								DragStarted="OnSeekDragStarted"
+								DragCompleted="OnSeekDragCompleted"
+								ValueChanged="OnSeekValueChanged" />
+							<Label Grid.Column="2" Text="{Binding Player.DurationText}" Style="{StaticResource TimeLabel}" />
+						</Grid>
+
+						<!-- Ana kontroller -->
+						<Grid
+							x:Name="MainControls"
+							Grid.Row="3"
+							ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto,*,Auto"
+							ColumnSpacing="4"
+							Padding="12,2,12,12">
+							<ImageButton
+								Grid.Column="0"
+								Style="{StaticResource IconButton}"
+								Source="{Binding Player.ShuffleIcon}"
+								SemanticProperties.Description="Karıştır"
+								Clicked="OnShuffleClicked" />
+							<ImageButton
+								Grid.Column="2"
+								Style="{StaticResource IconButton}"
+								Source="ic_prev.png"
+								Padding="13"
+								SemanticProperties.Description="Önceki"
+								Clicked="OnPrevClicked" />
+							<ImageButton
+								Grid.Column="3"
+								Style="{StaticResource IconButton}"
+								Source="ic_replay10.png"
+								WidthRequest="54"
+								HeightRequest="54"
+								CornerRadius="27"
+								Padding="10"
+								SemanticProperties.Description="10 saniye geri"
+								Clicked="OnReplayClicked" />
+							<ImageButton
+								x:Name="PlayPauseButton"
+								Grid.Column="4"
+								Source="{Binding Player.PlayPauseIcon}"
+								WidthRequest="78"
+								HeightRequest="78"
+								CornerRadius="39"
+								Padding="24"
+								Margin="10,0"
+								Background="{StaticResource PlayButtonFill}"
+								BorderColor="#7FF2FF"
+								BorderWidth="2.5"
+								SemanticProperties.Description="Oynat / Duraklat"
+								Clicked="OnPlayPauseClicked">
+								<ImageButton.Shadow>
+									<Shadow Brush="#3B9BFF" Opacity="0.9" Radius="22" />
+								</ImageButton.Shadow>
+							</ImageButton>
+							<ImageButton
+								Grid.Column="5"
+								Style="{StaticResource IconButton}"
+								Source="ic_forward10.png"
+								WidthRequest="54"
+								HeightRequest="54"
+								CornerRadius="27"
+								Padding="10"
+								SemanticProperties.Description="10 saniye ileri"
+								Clicked="OnForwardClicked" />
+							<ImageButton
+								Grid.Column="6"
+								Style="{StaticResource IconButton}"
+								Source="ic_next.png"
+								Padding="13"
+								SemanticProperties.Description="Sonraki"
+								Clicked="OnNextClicked" />
+							<ImageButton
+								Grid.Column="8"
+								Style="{StaticResource IconButton}"
+								Source="{Binding Player.RepeatIcon}"
+								SemanticProperties.Description="Tekrar"
+								Clicked="OnRepeatClicked" />
+						</Grid>
+
+						<!-- Ses, yansıtma, tam ekran -->
+						<Grid
+							x:Name="ExtraControls"
+							Grid.Row="3"
+							Grid.Column="1"
+							ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+							ColumnSpacing="6"
+							Padding="0,2,14,12">
+							<ImageButton
+								Style="{StaticResource IconButton}"
+								Source="{Binding Player.VolumeIcon}"
+								SemanticProperties.Description="Sesi kapat"
+								Clicked="OnMuteClicked" />
+							<Slider
+								x:Name="VolumeSlider"
+								Grid.Column="1"
+								Minimum="0"
+								Maximum="100"
+								MinimumWidthRequest="110"
+								WidthRequest="150"
+								VerticalOptions="Center"
+								Value="{Binding Player.Volume, Mode=TwoWay}" />
+							<Label
+								Grid.Column="2"
+								Text="{Binding Player.VolumeText}"
+								WidthRequest="32"
+								Style="{StaticResource TimeLabel}" />
+							<ImageButton
+								Grid.Column="3"
+								Style="{StaticResource IconButton}"
+								Source="ic_cast.png"
+								SemanticProperties.Description="Ekran yansıtma"
+								Clicked="OnCastClicked" />
+							<ImageButton
+								x:Name="FullscreenButton"
+								Grid.Column="4"
+								Style="{StaticResource IconButton}"
+								Source="ic_fullscreen.png"
+								SemanticProperties.Description="Tam ekran"
+								Clicked="OnFullscreenClicked" />
+						</Grid>
+					</Grid>
+				</Border>
+
+				<!-- ================= KÜTÜPHANE KARTI ================= -->
+				<Border
+					x:Name="LibraryCard"
+					Background="{StaticResource CardFill}"
+					Stroke="#335B8CFF"
+					StrokeThickness="1.2"
+					StrokeShape="RoundRectangle 22"
+					Padding="0">
+
+					<Grid RowDefinitions="Auto,Auto,Auto,*">
+
+						<!-- Bölüm başlığı -->
+						<Grid
+							Grid.Row="0"
+							ColumnDefinitions="Auto,*,Auto,Auto"
+							ColumnSpacing="6"
+							Padding="12,12,10,6">
+							<ImageButton
+								Style="{StaticResource IconButton}"
+								Source="ic_back.png"
+								IsVisible="{Binding ShowBack}"
+								Command="{Binding BackCommand}"
+								SemanticProperties.Description="Geri" />
+							<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Padding="6,0,0,0">
+								<Label
+									Text="{Binding SectionTitle}"
+									Style="{StaticResource TitleLabel}"
+									MaxLines="1"
+									LineBreakMode="TailTruncation" />
+								<Label Text="{Binding SectionCount}" Style="{StaticResource CaptionLabel}" />
+							</VerticalStackLayout>
+							<Border
+								Grid.Column="2"
+								IsVisible="{Binding ShowSortButton}"
+								StrokeShape="RoundRectangle 15"
+								Stroke="#405B8CFF"
+								BackgroundColor="#80111C46"
+								Padding="12,6"
+								VerticalOptions="Center">
+								<Label Text="{Binding SortText}" FontSize="12" FontFamily="PoppinsMedium" />
+								<Border.GestureRecognizers>
+									<TapGestureRecognizer Tapped="OnSortTapped" />
+								</Border.GestureRecognizers>
+							</Border>
+							<Grid Grid.Column="3" WidthRequest="46" HeightRequest="46" VerticalOptions="Center">
+								<ImageButton
+									Style="{StaticResource IconButton}"
+									Source="ic_refresh.png"
+									IsVisible="{Binding IsBusy, Converter={StaticResource Not}}"
+									Command="{Binding RescanCommand}"
+									SemanticProperties.Description="Yeniden tara" />
+								<ActivityIndicator
+									IsRunning="{Binding IsBusy}"
+									IsVisible="{Binding IsBusy}"
+									WidthRequest="26"
+									HeightRequest="26" />
+							</Grid>
+						</Grid>
+
+						<!-- Arama -->
+						<SearchBar
+							x:Name="SearchBox"
+							Grid.Row="1"
+							Margin="12,0,12,6"
+							Placeholder="Video, müzik, sanatçı, klasör ara…"
+							IsVisible="{Binding IsSearchVisible}"
+							Text="{Binding SearchText, Mode=TwoWay}" />
+
+						<!-- Ana sayfa özet kutucukları -->
+						<Grid
+							Grid.Row="2"
+							ColumnDefinitions="*,*,*"
+							ColumnSpacing="8"
+							Padding="12,0,12,8"
+							IsVisible="{Binding ShowHomeStats}">
+							<Border StrokeShape="RoundRectangle 14" Stroke="#3D2FE3FF" BackgroundColor="#8012204E" Padding="10,8">
+								<HorizontalStackLayout Spacing="8">
+									<Image Source="ic_video_small.png" WidthRequest="22" HeightRequest="22" />
+									<VerticalStackLayout>
+										<Label Text="{Binding VideoCount}" FontFamily="PoppinsBold" FontSize="16" />
+										<Label Text="Video" Style="{StaticResource CaptionLabel}" FontSize="11" />
+									</VerticalStackLayout>
+								</HorizontalStackLayout>
+								<Border.GestureRecognizers>
+									<TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Videos" />
+								</Border.GestureRecognizers>
+							</Border>
+							<Border Grid.Column="1" StrokeShape="RoundRectangle 14" Stroke="#3DB04BFF" BackgroundColor="#801A154E" Padding="10,8">
+								<HorizontalStackLayout Spacing="8">
+									<Image Source="ic_note_small.png" WidthRequest="22" HeightRequest="22" />
+									<VerticalStackLayout>
+										<Label Text="{Binding MusicCount}" FontFamily="PoppinsBold" FontSize="16" />
+										<Label Text="Müzik" Style="{StaticResource CaptionLabel}" FontSize="11" />
+									</VerticalStackLayout>
+								</HorizontalStackLayout>
+								<Border.GestureRecognizers>
+									<TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Music" />
+								</Border.GestureRecognizers>
+							</Border>
+							<Border Grid.Column="2" StrokeShape="RoundRectangle 14" Stroke="#3DFF4B6E" BackgroundColor="#80241433" Padding="10,8">
+								<HorizontalStackLayout Spacing="8">
+									<Image Source="ic_heart.png" WidthRequest="22" HeightRequest="22" />
+									<VerticalStackLayout>
+										<Label Text="{Binding FavoriteCount}" FontFamily="PoppinsBold" FontSize="16" />
+										<Label Text="Favori" Style="{StaticResource CaptionLabel}" FontSize="11" />
+									</VerticalStackLayout>
+								</HorizontalStackLayout>
+								<Border.GestureRecognizers>
+									<TapGestureRecognizer Command="{Binding SelectTabCommand}" CommandParameter="Favorites" />
+								</Border.GestureRecognizers>
+							</Border>
+						</Grid>
+
+						<!-- ========== Medya listesi ========== -->
+						<CollectionView
+							x:Name="MediaList"
+							Grid.Row="3"
+							IsVisible="{Binding ShowItemList}"
+							ItemsSource="{Binding Items}"
+							SelectionMode="None"
+							Margin="6,0,6,6">
+							<CollectionView.ItemTemplate>
+								<DataTemplate x:DataType="m:MediaItem">
+									<Border
+										Margin="4,3"
+										Padding="8,7"
+										StrokeShape="RoundRectangle 14"
+										StrokeThickness="1"
+										Stroke="Transparent"
+										BackgroundColor="Transparent">
+										<Border.Triggers>
+											<DataTrigger TargetType="Border" Binding="{Binding IsNowPlaying}" Value="True">
+												<Setter Property="BackgroundColor" Value="#3324468F" />
+												<Setter Property="Stroke" Value="#802FE3FF" />
+											</DataTrigger>
+										</Border.Triggers>
+										<Border.GestureRecognizers>
+											<TapGestureRecognizer Tapped="OnItemTapped" />
+										</Border.GestureRecognizers>
+
+										<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+											<!-- Küçük resim -->
+											<Border
+												WidthRequest="96"
+												HeightRequest="56"
+												StrokeShape="RoundRectangle 10"
+												StrokeThickness="0"
+												BackgroundColor="#1A2350">
+												<Grid>
+													<Image Source="{Binding DisplayThumb}" Aspect="AspectFill" />
+													<Border
+														IsVisible="{Binding IsVideo}"
+														HorizontalOptions="End"
+														VerticalOptions="End"
+														Margin="4"
+														Padding="5,1"
+														StrokeThickness="0"
+														StrokeShape="RoundRectangle 6"
+														BackgroundColor="#B3000000">
+														<Label Text="{Binding DurationText}" FontSize="10" FontFamily="PoppinsMedium" />
+													</Border>
+													<ProgressBar
+														IsVisible="{Binding HasProgress}"
+														Progress="{Binding Progress}"
+														VerticalOptions="End"
+														HeightRequest="3" />
+												</Grid>
+											</Border>
+
+											<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+												<Label
+													Text="{Binding Title}"
+													FontFamily="PoppinsMedium"
+													FontSize="14.5"
+													MaxLines="1"
+													LineBreakMode="TailTruncation">
+													<Label.Triggers>
+														<DataTrigger TargetType="Label" Binding="{Binding IsNowPlaying}" Value="True">
+															<Setter Property="TextColor" Value="{StaticResource AuroraCyan}" />
+														</DataTrigger>
+													</Label.Triggers>
+												</Label>
+												<Label
+													Text="{Binding Subtitle}"
+													Style="{StaticResource CaptionLabel}"
+													MaxLines="1"
+													LineBreakMode="TailTruncation" />
+											</VerticalStackLayout>
+
+											<ImageButton
+												Grid.Column="2"
+												Style="{StaticResource IconButton}"
+												Source="ic_heart_outline.png"
+												Opacity="0.75"
+												Clicked="OnItemFavoriteClicked">
+												<ImageButton.Triggers>
+													<DataTrigger TargetType="ImageButton" Binding="{Binding IsFavorite}" Value="True">
+														<Setter Property="Source" Value="ic_heart_red.png" />
+														<Setter Property="Opacity" Value="1" />
+													</DataTrigger>
+												</ImageButton.Triggers>
+											</ImageButton>
+										</Grid>
+									</Border>
+								</DataTemplate>
+							</CollectionView.ItemTemplate>
+						</CollectionView>
+
+						<!-- ========== Klasör listesi ========== -->
+						<CollectionView
+							x:Name="FolderList"
+							Grid.Row="3"
+							IsVisible="{Binding ShowFolderList}"
+							ItemsSource="{Binding Folders}"
+							SelectionMode="None"
+							Margin="6,0,6,6">
+							<CollectionView.ItemTemplate>
+								<DataTemplate x:DataType="m:FolderInfo">
+									<Border
+										Margin="4,3"
+										Padding="8,7"
+										StrokeShape="RoundRectangle 14"
+										StrokeThickness="1"
+										Stroke="#1FFFFFFF"
+										BackgroundColor="#40111C46">
+										<Border.GestureRecognizers>
+											<TapGestureRecognizer Tapped="OnFolderTapped" />
+										</Border.GestureRecognizers>
+										<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+											<Border
+												WidthRequest="56"
+												HeightRequest="56"
+												StrokeShape="RoundRectangle 12"
+												StrokeThickness="0"
+												BackgroundColor="#22FFC94D">
+												<Image Source="{Binding DisplayThumb}" Aspect="AspectFill" />
+											</Border>
+											<VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+												<Label
+													Text="{Binding Name}"
+													FontFamily="PoppinsMedium"
+													FontSize="15"
+													MaxLines="1"
+													LineBreakMode="TailTruncation" />
+												<Label Text="{Binding CountText}" Style="{StaticResource CaptionLabel}" />
+												<Label
+													Text="{Binding Path}"
+													TextColor="{StaticResource TextDim}"
+													FontSize="10.5"
+													MaxLines="1"
+													LineBreakMode="HeadTruncation" />
+											</VerticalStackLayout>
+											<Image
+												Grid.Column="2"
+												Source="ic_back.png"
+												Rotation="180"
+												WidthRequest="18"
+												HeightRequest="18"
+												Opacity="0.6"
+												VerticalOptions="Center" />
+										</Grid>
+									</Border>
+								</DataTemplate>
+							</CollectionView.ItemTemplate>
+						</CollectionView>
+
+						<!-- ========== Boş durum ========== -->
+						<VerticalStackLayout
+							Grid.Row="3"
+							IsVisible="{Binding IsEmpty}"
+							VerticalOptions="Center"
+							HorizontalOptions="Center"
+							Spacing="10"
+							Padding="24">
+							<Image Source="logo_mark.png" WidthRequest="72" HeightRequest="72" Opacity="0.85" />
+							<Label
+								Text="{Binding EmptyTitle}"
+								FontFamily="PoppinsBold"
+								FontSize="17"
+								HorizontalTextAlignment="Center" />
+							<Label
+								Text="{Binding EmptyText}"
+								Style="{StaticResource CaptionLabel}"
+								FontSize="13"
+								MaximumWidthRequest="360"
+								HorizontalTextAlignment="Center" />
+							<Button
+								Text="{Binding EmptyButtonText}"
+								Style="{StaticResource PillButton}"
+								IsVisible="{Binding ShowEmptyButton}"
+								Command="{Binding GrantPermissionCommand}"
+								HorizontalOptions="Center"
+								Margin="0,6,0,0" />
+							<Button
+								Text="Dosya Ekle"
+								Style="{StaticResource OutlineButton}"
+								IsVisible="{Binding ShowEmptyImport}"
+								Command="{Binding ImportFilesCommand}"
+								HorizontalOptions="Center"
+								Padding="22,0" />
+						</VerticalStackLayout>
+
+						<!-- ========== AYARLAR ========== -->
+						<ScrollView Grid.Row="1" Grid.RowSpan="3" IsVisible="{Binding IsSettingsTab}">
+							<VerticalStackLayout Padding="14,0,14,20" Spacing="8">
+
+								<Label Text="OYNATMA" Style="{StaticResource SectionHeader}" Margin="4,4,4,6" />
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,Auto">
+										<VerticalStackLayout>
+											<Label Text="Kaldığım yerden devam et" FontFamily="PoppinsMedium" />
+											<Label Text="Videoyu yeniden açtığınızda son konumdan başlar" Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Switch Grid.Column="1" IsToggled="{Binding ResumePlayback}" VerticalOptions="Center" />
+									</Grid>
+								</Border>
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,Auto">
+										<VerticalStackLayout>
+											<Label Text="Sonrakini otomatik oynat" FontFamily="PoppinsMedium" />
+											<Label Text="Dosya bitince listedeki sıradaki dosyaya geçer" Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Switch Grid.Column="1" IsToggled="{Binding AutoPlayNext}" VerticalOptions="Center" />
+									</Grid>
+								</Border>
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,Auto">
+										<VerticalStackLayout>
+											<Label Text="Arka planda çal" FontFamily="PoppinsMedium" />
+											<Label Text="Ekran kapalıyken müzik çalmaya devam eder, bildirimde kontroller görünür (uygulama yeniden açılınca etkin olur)" Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Switch Grid.Column="1" IsToggled="{Binding BackgroundAudio}" VerticalOptions="Center" />
+									</Grid>
+								</Border>
+
+								<Label Text="GÖRÜNTÜ" Style="{StaticResource SectionHeader}" />
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,Auto">
+										<VerticalStackLayout>
+											<Label Text="Ekranı açık tut" FontFamily="PoppinsMedium" />
+											<Label Text="Video oynarken ekran kararmaz" Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Switch Grid.Column="1" IsToggled="{Binding KeepScreenOn}" VerticalOptions="Center" />
+									</Grid>
+								</Border>
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,Auto">
+										<VerticalStackLayout>
+											<Label Text="Tam ekranda yataya döndür" FontFamily="PoppinsMedium" />
+											<Label Text="Yatay videolar tam ekranda otomatik yatay açılır" Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Switch Grid.Column="1" IsToggled="{Binding AutoRotateFullscreen}" VerticalOptions="Center" />
+									</Grid>
+								</Border>
+
+								<Label Text="KÜTÜPHANE" Style="{StaticResource SectionHeader}" />
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,Auto">
+										<VerticalStackLayout>
+											<Label Text="Açılışta otomatik tara" FontFamily="PoppinsMedium" />
+											<Label Text="Yeni eklenen video ve müzikleri her açılışta bulur" Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Switch Grid.Column="1" IsToggled="{Binding ScanOnStart}" VerticalOptions="Center" />
+									</Grid>
+								</Border>
+
+								<Border Style="{StaticResource SettingCard}">
+									<VerticalStackLayout Spacing="10">
+										<Label Text="{Binding LibraryInfo}" FontFamily="PoppinsMedium" />
+										<Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+											<Button Text="Şimdi Tara" Style="{StaticResource PillButton}" Command="{Binding RescanCommand}" />
+											<Button Grid.Column="1" Text="Küçük resimleri yenile" Style="{StaticResource OutlineButton}" Command="{Binding ClearThumbsCommand}" />
+										</Grid>
+										<VerticalStackLayout Spacing="6" IsVisible="{Binding IsImportSupported}">
+											<Button Text="Dosya Ekle (Dosyalar, iCloud Drive)" Style="{StaticResource OutlineButton}" Command="{Binding ImportFilesCommand}" />
+											<Label
+												Text="Fotoğraflar'daki videolar ve Müzik arşivi otomatik bulunur. Bilgisayardan dosya aktarmak için Finder'da iPhone › Dosyalar › Aurora, telefonda Dosyalar › iPhone'umda › Aurora klasörünü kullanın."
+												Style="{StaticResource CaptionLabel}" />
+										</VerticalStackLayout>
+										<Button Text="Uygulama izinleri" Style="{StaticResource OutlineButton}" Command="{Binding OpenAppSettingsCommand}" />
+										<Label Text="{Binding PermissionHint}" Style="{StaticResource CaptionLabel}" />
+									</VerticalStackLayout>
+								</Border>
+
+								<Label Text="VERİLER" Style="{StaticResource SectionHeader}" />
+
+								<Border Style="{StaticResource SettingCard}">
+									<Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+										<Button Text="Geçmişi temizle" Style="{StaticResource OutlineButton}" Clicked="OnClearHistoryClicked" />
+										<Button Grid.Column="1" Text="Favorileri temizle" Style="{StaticResource OutlineButton}" Clicked="OnClearFavoritesClicked" />
+									</Grid>
+								</Border>
+
+								<Label Text="HAKKINDA" Style="{StaticResource SectionHeader}" />
+
+								<Border Style="{StaticResource SettingCard}" Padding="16">
+									<VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+										<Image Source="logo_full.png" HeightRequest="96" Aspect="AspectFit" />
+										<Label Text="TROÇKİ® AURORA MEDIA PLAYER" FontFamily="PoppinsBold" HorizontalTextAlignment="Center" />
+										<Label Text="{Binding VersionText}" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+										<Label Text="{Binding DatabaseInfo}" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+										<Label Text="Düşün • Keşfet • Üret • Paylaş" TextColor="{StaticResource AuroraCyan}" FontSize="12" HorizontalTextAlignment="Center" />
+										<Label Text="© TROÇKİ® Software" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+									</VerticalStackLayout>
+								</Border>
+							</VerticalStackLayout>
+						</ScrollView>
+					</Grid>
+				</Border>
+			</Grid>
+		</Grid>
+	</Grid>
+</ContentPage>

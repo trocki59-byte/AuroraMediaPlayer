@@ -1,0 +1,7 @@
+bin/
+obj/
+cikti/
+cikti_play/
+.vs/
+*.user
+*.keystore
