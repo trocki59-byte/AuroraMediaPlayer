@@ -78,6 +78,16 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<!-- Windows masaüstü programı ve web kaynakları ayrı projelerdir; mobil uygulamaya katılmaz -->
+	<ItemGroup>
+		<Compile Remove="desktop-net/**" />
+		<None Remove="desktop-net/**" />
+		<EmbeddedResource Remove="desktop-net/**" />
+		<Content Remove="desktop-net/**" />
+		<Compile Remove="web-src/**;docs/**" />
+		<None Remove="web-src/**;docs/**" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.90" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
