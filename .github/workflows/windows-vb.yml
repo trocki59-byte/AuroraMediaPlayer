@@ -1,4 +1,4 @@
-# Aurora — VB.NET masaüstü sürümü derleme kontrolü
+# Aurora — VB.NET masaüstü sürümü: exe + Windows kurulum dosyası (Inno Setup)
 name: Windows VB.NET
 
 on:
@@ -6,6 +6,9 @@ on:
   push:
     branches: [ main ]
     paths: [ "desktop-vb/**", ".github/workflows/windows-vb.yml" ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -15,17 +18,45 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      - name: Web arayüzünü son sürümle eşitle
+        shell: bash
+        run: cp docs/index.html docs/manifest.webmanifest docs/icon-*.png desktop-vb/web/
+
       - name: EXE derle (VB.NET)
         shell: bash
         run: |
           set -o pipefail
-          dotnet publish desktop-vb/AuroraDesktopVB.vbproj -c Release -o cikti 2>&1 | tee build.log || {
+          dotnet publish desktop-vb/AuroraDesktopVB.vbproj -c Release -o desktop-vb/cikti 2>&1 | tee build.log || {
             grep -E "error" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           }
-          grep -E "warning BC" build.log | sort -u | head -20 || true
-          ls -la cikti
+          ls -la desktop-vb/cikti
+
+      - name: Kurulum dosyası (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress | Out-Null
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          & $iscc desktop-vb\setup\AuroraSetup.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Get-ChildItem desktop-vb\kurulum
+
       - uses: actions/upload-artifact@v4
         with:
-          name: AuroraMediaPlayer-VBNET
-          path: cikti/AuroraMediaPlayer.exe
+          name: Aurora-Setup
+          path: desktop-vb/kurulum/*.exe
+
+      - name: GitHub sürümünde yayınla
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="windows-v$(grep -oE '<Version>[^<]+' desktop-vb/AuroraDesktopVB.vbproj | sed 's/.*>//')"
+          if ! gh release view "$VER" >/dev/null 2>&1; then
+            gh release create "$VER" --target "$GITHUB_SHA" --title "TROÇKİ® AURORA MEDIA PLAYER — Windows ${VER#windows-v}" --notes "Windows kurulum dosyası."
+          fi
+          gh release upload "$VER" desktop-vb/kurulum/*.exe --clobber

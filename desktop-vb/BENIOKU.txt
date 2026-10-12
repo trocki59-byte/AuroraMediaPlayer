@@ -23,3 +23,10 @@ Kısayollar
   F11 → Tam ekran   ·   Esc → Tam ekrandan çık   ·   F5 → Yenile
 
 Not: Arayüzü güncellemek için web\index.html dosyasını yenisiyle değiştirip yeniden derleyin.
+
+Kurulum dosyası (Setup) üretme
+  • Inno Setup 6'yı kurun: https://jrsoftware.org/isdl.php
+  • kurulum_yap.bat dosyasına çift tıklayın.
+  • Kurulum: kurulum\Aurora-Setup-2.0.0.exe
+    (Program Files'a kurar, masaüstü + Başlat menüsü kısayolu, Denetim Masası'ndan kaldırılabilir.
+     Kaldırınca kütüphaneniz silinmez: %LOCALAPPDATA%\AuroraMediaPlayer)
