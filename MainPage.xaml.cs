@@ -53,10 +53,23 @@ public partial class MainPage : ContentPage
 	protected override async void OnAppearing()
 	{
 		base.OnAppearing();
-		await LoadBackgroundImagesAsync();
-		ApplyLayout(force: true);
-		await _vm.InitializeAsync();
-		HandleExternalOpen();
+		try
+		{
+			var last = CrashLog.TakeLast();
+			if (last is not null)
+				await DisplayAlert("Önceki açılışta hata oluştu", last, "Tamam");
+
+			await LoadBackgroundImagesAsync();
+			ApplyLayout(force: true);
+			await _vm.InitializeAsync();
+			HandleExternalOpen();
+		}
+		catch (Exception ex)
+		{
+			CrashLog.Write(ex);
+			var msg = ex.ToString();
+			await DisplayAlert("Aurora hata", msg.Length > 1800 ? msg[..1800] + "…" : msg, "Tamam");
+		}
 	}
 
 	async Task LoadBackgroundImagesAsync()

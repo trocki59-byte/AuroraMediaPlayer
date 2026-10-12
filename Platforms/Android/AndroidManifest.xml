@@ -10,6 +10,17 @@
 		android:hardwareAccelerated="true"
 		android:requestLegacyExternalStorage="true"
 		android:enableOnBackInvokedCallback="false">
+
+		<!-- MediaElement arka planda çalma servisi (Android 14+ için zorunlu tanım) -->
+		<service
+			android:name="communityToolkit.maui.media.services"
+			android:exported="false"
+			android:enabled="true"
+			android:foregroundServiceType="mediaPlayback">
+			<intent-filter>
+				<action android:name="androidx.media3.session.MediaSessionService" />
+			</intent-filter>
+		</service>
 	</application>
 
 	<!-- Medya dosyalarını okuma -->
