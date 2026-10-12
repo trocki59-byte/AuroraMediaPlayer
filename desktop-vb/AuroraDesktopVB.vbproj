@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		TROÇKİ® AURORA MEDIA PLAYER — Windows masaüstü programı (VB.NET)
+		.NET 10 · Windows Forms · WebView2
+		Web sürümünün tamamı exe'nin içine gömülüdür; internet ve GitHub gerekmez.
+		Bilgisayardaki .NET 10 Masaüstü Çalışma Zamanı'nı kullanır.
+		Visual Studio'da açıp ▶ ile çalıştırın ya da derle_exe.bat ile tek dosya exe üretin.
+	-->
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<MyType>WindowsFormsWithCustomSubMain</MyType>
+		<StartupObject>AuroraDesktopVB.Program</StartupObject>
+		<RootNamespace>AuroraDesktopVB</RootNamespace>
+		<AssemblyName>AuroraMediaPlayer</AssemblyName>
+		<OptionStrict>On</OptionStrict>
+		<OptionInfer>On</OptionInfer>
+		<OptionExplicit>On</OptionExplicit>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
+
+		<Product>Aurora Media Player</Product>
+		<Company>TROÇKİ Software</Company>
+		<Copyright>© TROÇKİ Software</Copyright>
+		<Description>TROÇKİ® Aurora Media Player</Description>
+		<Version>2.0.0</Version>
+
+		<!-- Yayınlama: tek dosya exe, bilgisayardaki .NET 10'u kullanır -->
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SelfContained>false</SelfContained>
+		<PublishSingleFile>true</PublishSingleFile>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<DebugType>embedded</DebugType>
+		<SatelliteResourceLanguages>tr;en</SatelliteResourceLanguages>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Import Include="System.Drawing" />
+		<Import Include="System.Windows.Forms" />
+		<Import Include="System.IO" />
+	</ItemGroup>
+
+	<!-- Web arayüzü exe'ye gömülür -->
+	<ItemGroup>
+		<EmbeddedResource Include="web\**\*" LogicalName="web/%(RecursiveDir)%(Filename)%(Extension)" />
+		<None Include="icon.ico" />
+	</ItemGroup>
+
+</Project>

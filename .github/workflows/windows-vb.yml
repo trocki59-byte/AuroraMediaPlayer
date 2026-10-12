@@ -1,0 +1,31 @@
+# Aurora — VB.NET masaüstü sürümü derleme kontrolü
+name: Windows VB.NET
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ "desktop-vb/**", ".github/workflows/windows-vb.yml" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: EXE derle (VB.NET)
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish desktop-vb/AuroraDesktopVB.vbproj -c Release -o cikti 2>&1 | tee build.log || {
+            grep -E "error" build.log | sort -u | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
+          grep -E "warning BC" build.log | sort -u | head -20 || true
+          ls -la cikti
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuroraMediaPlayer-VBNET
+          path: cikti/AuroraMediaPlayer.exe

@@ -84,8 +84,9 @@
 		<None Remove="desktop-net/**" />
 		<EmbeddedResource Remove="desktop-net/**" />
 		<Content Remove="desktop-net/**" />
-		<Compile Remove="web-src/**;docs/**" />
-		<None Remove="web-src/**;docs/**" />
+		<Compile Remove="web-src/**;docs/**;desktop-vb/**" />
+		<EmbeddedResource Remove="desktop-vb/**" />
+		<None Remove="web-src/**;docs/**;desktop-vb/**" />
 	</ItemGroup>
 
 	<ItemGroup>

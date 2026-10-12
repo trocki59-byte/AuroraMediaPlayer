@@ -1,0 +1,25 @@
+TROÇKİ® AURORA MEDIA PLAYER — Windows (VB.NET)
+================================================
+
+Gerekenler
+  • Visual Studio 2026 (".NET masaüstü geliştirme" iş yükü) veya .NET 10 SDK
+  • Microsoft Edge WebView2 (Windows 10/11'de genelde yüklü)
+
+Çalıştırma
+  1) AuroraDesktopVB.vbproj dosyasına çift tıklayın → Visual Studio açılır.
+  2) Üstteki ▶ (Başlat) düğmesine basın.
+
+Tek dosya exe üretme
+  • derle_exe.bat dosyasına çift tıklayın.
+  • Exe: cikti\AuroraMediaPlayer.exe
+
+Dosyalar
+  Program.vb     → Başlangıç (program ikinci kez açılmaz, mevcut pencere öne gelir)
+  MainForm.vb    → Ana pencere (WebView2, tam ekran, izinler, pencere konumu)
+  web\           → Aurora arayüzü (exe'nin içine gömülür)
+  icon.ico       → Program simgesi
+
+Kısayollar
+  F11 → Tam ekran   ·   Esc → Tam ekrandan çık   ·   F5 → Yenile
+
+Not: Arayüzü güncellemek için web\index.html dosyasını yenisiyle değiştirip yeniden derleyin.
