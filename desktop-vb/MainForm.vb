@@ -134,14 +134,14 @@ Public NotInheritable Class MainForm
         Directory.CreateDirectory(dir)
         Dim asm = Assembly.GetExecutingAssembly()
 
-        For Each name In asm.GetManifestResourceNames()
-            If Not (name.StartsWith("web/", StringComparison.Ordinal) OrElse name.StartsWith("web\", StringComparison.Ordinal)) Then Continue For
+        For Each kaynak In asm.GetManifestResourceNames()
+            If Not (kaynak.StartsWith("web/", StringComparison.Ordinal) OrElse kaynak.StartsWith("web\", StringComparison.Ordinal)) Then Continue For
 
-            Dim rel = name.Substring(4).Replace("\"c, Path.DirectorySeparatorChar).Replace("/"c, Path.DirectorySeparatorChar)
+            Dim rel = kaynak.Substring(4).Replace("\"c, Path.DirectorySeparatorChar).Replace("/"c, Path.DirectorySeparatorChar)
             Dim target = Path.Combine(dir, rel)
             Directory.CreateDirectory(Path.GetDirectoryName(target))
 
-            Using src = asm.GetManifestResourceStream(name)
+            Using src = asm.GetManifestResourceStream(kaynak)
                 Using dst = File.Create(target)
                     src.CopyTo(dst)
                 End Using
