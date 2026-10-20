@@ -76,7 +76,7 @@ img { display: block; }
 /* ---------- sekmeler ---------- */
 .tabs-wrap { overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
 .tabs-wrap::-webkit-scrollbar { display: none; }
-.tabs { display: grid; grid-template-columns: repeat(8, minmax(84px, 1fr)); gap: 10px; padding-block: 6px 10px; min-width: 730px; }
+.tabs { display: grid; grid-template-columns: repeat(9, minmax(84px, 1fr)); gap: 10px; padding-block: 6px 10px; min-width: 820px; }
 .tab {
   display: grid; justify-items: center; align-content: center; gap: 6px;
   min-height: 84px; padding: 10px 6px 8px;
@@ -370,6 +370,13 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .sheet button:hover { background: rgba(255,255,255,.06); }
 .sheet button.cancel { text-align: center; color: var(--fg-2); }
 .sheet button.danger { color: #ff8ea5; }
+.sheet input.sheet-in { margin: 4px 12px 10px; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.07); border: 1px solid rgba(91,140,255,.4); color: var(--fg); font: inherit; font-size: 15px; outline: none; }
+.sheet input.sheet-in:focus { border-color: var(--cyan); }
+.sheet button.ok { text-align: center; background: linear-gradient(90deg, var(--blue), var(--cyan)); color: #04102a; font-weight: 600; margin: 2px 12px 0; }
+.pl-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 4px 10px; }
+.pl-actions button { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(91,140,255,.3); font-weight: 500; font-size: 13px; }
+.pl-actions button.main { background: linear-gradient(90deg, var(--blue), var(--cyan)); color: #04102a; border: 0; font-weight: 600; }
+.pl-actions .ico { width: 18px; height: 18px; }
 .toast {
   position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); translate: -50% 0; z-index: 90;
   padding: 10px 16px; border-radius: 14px; background: #111c46; border: 1px solid var(--line); box-shadow: 0 0 20px rgba(0,0,0,.5);
@@ -541,6 +548,33 @@ function sheet({ title, text, items = [], cancel = "Kapat" }) {
   });
 }
 
+/* Metin isteyen küçük pencere (liste adı vb.) */
+function ask({ title, text, value = "", placeholder = "", ok = "Tamam" }) {
+  return new Promise((resolve) => {
+    const bg = document.createElement("div");
+    bg.className = "sheet-bg";
+    const box = document.createElement("form");
+    box.className = "sheet"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
+    if (title) { const h = document.createElement("h3"); h.textContent = title; box.appendChild(h); }
+    if (text) { const p = document.createElement("p"); p.textContent = text; box.appendChild(p); }
+    const inp = document.createElement("input");
+    inp.className = "sheet-in"; inp.value = value; inp.placeholder = placeholder; inp.maxLength = 60;
+    inp.setAttribute("aria-label", title || placeholder || "Metin");
+    box.appendChild(inp);
+    const done = (v) => { bg.remove(); document.removeEventListener("keydown", onKey); resolve(v); };
+    const b = document.createElement("button"); b.type = "submit"; b.className = "ok"; b.textContent = ok; box.appendChild(b);
+    const c = document.createElement("button"); c.type = "button"; c.className = "cancel"; c.textContent = "Vazgeç"; c.onclick = () => done(null); box.appendChild(c);
+    box.onsubmit = (e) => { e.preventDefault(); const v = inp.value.trim(); if (v) done(v); else inp.focus(); };
+    bg.appendChild(box);
+    bg.addEventListener("click", (e) => { if (e.target === bg) done(null); });
+    const onKey = (e) => { if (e.key === "Escape") done(null); };
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(bg);
+    inp.focus(); inp.select();
+  });
+}
+const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
 /* ================================================================ ayarlar (cihazda) */
 const SKEY = "aurora.settings.v1";
 const settings = Object.assign(
@@ -611,6 +645,7 @@ const state = {
   items: [],          // {id,name,title,artist,type,size,added,duration,width,height,thumb,fav,lastPlayed,pos,plays,folder,blob?,sample?}
   tab: "home",
   folder: null,
+  playlist: null,
   search: "",
   queue: [], order: [], pos: -1,
   current: null,
@@ -621,7 +656,7 @@ const save = (it) => { if (!it.sample && it.type !== "youtube") dbPutMeta(it); }
 /* ================================================================ sekmeler */
 const TABS = [
   ["home", "Ana Sayfa", "home"], ["videos", "Videolar", "video"], ["music", "Müzikler", "music"],
-  ["folders", "Klasörler", "folder"], ["favorites", "Favoriler", "heart"], ["recent", "Son Oynatılanlar", "clock"],
+  ["folders", "Klasörler", "folder"], ["playlists", "Çalma Listeleri", "list"], ["favorites", "Favoriler", "heart"], ["recent", "Son Oynatılanlar", "clock"],
   ["youtube", "YouTube Müzik", "play"], ["settings", "Ayarlar", "settings"],
 ];
 $("tabs").innerHTML = TABS.map(([k, label, ico]) =>
@@ -633,7 +668,7 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("[data-action='add']")) addFiles();
 });
 function selectTab(tab) {
-  state.tab = tab; state.folder = null;
+  state.tab = tab; state.folder = null; state.playlist = null;
   try { localStorage.setItem("aurora.tab", tab); } catch {}
   render();
 }
@@ -654,7 +689,7 @@ function sorted(list) {
 function filtered(list) {
   const q = lower(state.search.trim());
   if (!q) return list;
-  return list.filter((m) => [m.title, m.name, m.artist, m.folder].some((v) => lower(v).includes(q)));
+  return list.filter((m) => [m.title, m.name, m.artist, m.album, m.folder].some((v) => lower(v).includes(q)));
 }
 const hasProgress = (m) => m.duration > 0 && m.pos / m.duration > 0.02 && m.pos / m.duration < 0.97;
 
@@ -668,6 +703,7 @@ function currentList() {
     case "queue": return state.order.map((i) => state.queue[i]).filter(Boolean);
     case "youtube": return yt.results;
     case "folders": return state.folder ? sorted(filtered(all.filter((m) => m.folder === state.folder))) : [];
+    case "playlists": { const p = plById(state.playlist); return p ? filtered(plItems(p)) : []; }
     default: {
       if (state.search.trim()) return sorted(filtered(all));
       const cont = all.filter((m) => m.type === "video" && hasProgress(m)).sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 10);
@@ -690,6 +726,7 @@ function subtitle(m) {
   const p = [];
   if (m.type === "youtube") return [m.artist, popText(m), m.duration ? fmt(m.duration) : ""].filter(Boolean).join("  •  ");
   if (m.type === "audio" && m.artist) p.push(m.artist);
+  if (m.type === "audio" && m.album) p.push(m.album);
   if (m.type === "video" && m.width) p.push(`${m.width} × ${m.height}`);
   if (m.folder) p.push(m.folder);
   p.push(fmt(m.duration));
@@ -698,11 +735,11 @@ function subtitle(m) {
 
 function render() {
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
-  const titles = { home: "Son Eklenenler", videos: "Videolar", music: "Müzikler", folders: state.folder || "Klasörler", favorites: "Favoriler", recent: "Son Oynatılanlar", settings: "Ayarlar", queue: "Oynatma Sırası", youtube: "YouTube Müzik" };
+  const titles = { home: "Son Eklenenler", videos: "Videolar", music: "Müzikler", folders: state.folder || "Klasörler", playlists: plById(state.playlist)?.name || "Çalma Listeleri", favorites: "Favoriler", recent: "Son Oynatılanlar", settings: "Ayarlar", queue: "Oynatma Sırası", youtube: "YouTube Müzik" };
   $("libTitle").textContent = titles[state.tab];
-  $("btnLibBack").hidden = !(state.tab === "queue" || (state.tab === "folders" && state.folder));
+  $("btnLibBack").hidden = !(state.tab === "queue" || (state.tab === "folders" && state.folder) || (state.tab === "playlists" && state.playlist));
   $("btnSort").textContent = sortLabel();
-  $("btnSort").hidden = ["settings", "recent", "queue"].includes(state.tab) || (state.tab === "folders" && !state.folder);
+  $("btnSort").hidden = ["settings", "recent", "queue", "playlists"].includes(state.tab) || (state.tab === "folders" && !state.folder);
   const isSettings = state.tab === "settings";
   if (state.tab === "youtube") {
     $("settings").hidden = true; $("list").hidden = false; $("stats").hidden = true; $("btnSort").hidden = true;
@@ -731,9 +768,29 @@ function render() {
     return;
   }
 
+  if (state.tab === "playlists" && !state.playlist) {
+    $("libCount").textContent = `${playlists.length} liste`;
+    const newRow = `<div class="pl-actions"><button class="main" data-plnew="1"><span>+</span> Yeni liste</button></div>`;
+    $("list").innerHTML = newRow + (playlists.length ? playlists.map((p) => {
+      const its = plItems(p), th = its.find((m) => m.thumb)?.thumb;
+      const dur = its.reduce((a, m) => a + (m.duration || 0), 0);
+      return `
+      <button class="row" data-playlist="${esc(p.id)}">
+        <span class="thumb folder" style="${th ? `background-image:url('${th}')` : ""}">${th ? "" : `<img class="ico" src="${I.list}" alt="">`}</span>
+        <span class="r-text"><span class="r-title">${esc(p.name)}</span><span class="r-sub">${[`${its.length} parça`, dur ? fmt(dur) : ""].filter(Boolean).join("  •  ")}</span></span>
+        <span></span><img class="ico" src="${I.back}" alt="" style="transform:rotate(180deg);opacity:.5;width:16px;height:16px">
+      </button>`; }).join("") : emptyHtml());
+    return;
+  }
+
   const list = currentList();
   $("libCount").textContent = `${list.length} öğe`;
-  $("list").innerHTML = list.length ? rowsHtml(list) : emptyHtml();
+  const plBar = state.tab === "playlists" && state.playlist ? `<div class="pl-actions">
+      ${list.length ? `<button class="main" data-plplay="0"><img class="ico" src="${I.play}" alt="">Tümünü çal</button>
+      <button data-plplay="1"><img class="ico" src="${I.shuffle}" alt="">Karıştır</button>` : ""}
+      <button data-plrename="1">Yeniden adlandır</button>
+      <button data-pldelete="1">Listeyi sil</button></div>` : "";
+  $("list").innerHTML = plBar + (list.length ? rowsHtml(list) : emptyHtml());
 }
 
 function rowsHtml(list) {
@@ -755,6 +812,8 @@ function emptyHtml() {
   let h = "Henüz dosya yok", p = "Video ve müziklerinizi ekleyin. Dosyalar yalnızca bu tarayıcıda saklanır.";
   if (state.search.trim()) { h = "Sonuç bulunamadı"; p = `"${state.search}" ile eşleşen dosya yok.`; }
   else if (state.tab === "favorites") { h = "Henüz favori yok"; p = "Bir dosyayı favorilere eklemek için yanındaki kalbe dokunun."; }
+  else if (state.tab === "playlists" && !state.playlist) { h = "Henüz çalma listesi yok"; p = "Yukarıdaki \"Yeni liste\" düğmesine dokunun ya da bir şarkının yanındaki ⋯ menüsünden \"Çalma listesine ekle\"yi seçin."; }
+  else if (state.tab === "playlists") { h = "Liste boş"; p = "Bir şarkının yanındaki ⋯ menüsünden \"Çalma listesine ekle\"yi seçin. YouTube şarkıları da eklenebilir."; }
   else if (state.tab === "recent") { h = "Henüz bir şey oynatılmadı"; p = "İzlediğiniz ve dinlediğiniz dosyalar burada listelenir."; }
   else if (state.tab === "queue") { h = "Oynatma sırası boş"; p = "Bir listeden dosya seçtiğinizde sıra oluşur."; }
   else if (state.tab === "videos") { h = "Henüz video yok"; }
@@ -770,6 +829,13 @@ $("list").addEventListener("click", async (e) => {
   if (more) { e.stopPropagation(); itemMenu(find(more.dataset.more)); return; }
   const f = e.target.closest("[data-folder]");
   if (f) { state.folder = f.dataset.folder; render(); return; }
+  const pl = e.target.closest("[data-playlist]");
+  if (pl) { state.playlist = pl.dataset.playlist; render(); return; }
+  if (e.target.closest("[data-plnew]")) { const p = await newPlaylist(); if (p) { state.playlist = p.id; render(); } return; }
+  const pp = e.target.closest("[data-plplay]");
+  if (pp) { playPlaylist(plById(state.playlist), pp.dataset.plplay === "1"); return; }
+  if (e.target.closest("[data-plrename]")) { renamePlaylist(plById(state.playlist)); return; }
+  if (e.target.closest("[data-pldelete]")) { deletePlaylist(plById(state.playlist)); return; }
   if (e.target.closest("a, form, .yt-actions, .yt-chips, #ytMore")) return;
   const row = e.target.closest("[data-id]");
   if (row) playFromList(find(row.dataset.id));
@@ -777,11 +843,11 @@ $("list").addEventListener("click", async (e) => {
 $("list").addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-id]")) { e.preventDefault(); playFromList(find(e.target.dataset.id)); }
 });
-const find = (id) => state.items.find((m) => m.id === id) || state.queue.find((m) => m.id === id) || yt.results.find((m) => m.id === id);
+const find = (id) => state.items.find((m) => m.id === id) || state.queue.find((m) => m.id === id) || yt.results.find((m) => m.id === id) || plYt.get(id);
 
 $("btnLibBack").onclick = () => {
   if (state.tab === "queue") selectTab(state.current?.type === "audio" ? "music" : "videos");
-  else { state.folder = null; render(); }
+  else { state.folder = null; state.playlist = null; render(); }
 };
 $("btnSort").onclick = async () => {
   const v = await sheet({ title: "Sırala", items: [
@@ -801,6 +867,213 @@ $("btnSearch").onclick = () => {
   else { state.search = ""; $("searchInput").value = ""; render(); }
 };
 $("searchInput").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+
+/* ================================================================ çalma listeleri */
+let playlists = [];                 // {id, name, ids:[...], yt:{id: anlık görüntü}, created}
+const plYt = new Map();             // YouTube parçaları: her id için tek nesne (çalan parça karşılaştırması için)
+const plById = (id) => playlists.find((p) => p.id === id);
+const savePlaylists = () => tx("kv", "readwrite", (s) => s.put(JSON.parse(JSON.stringify(playlists)), "playlists")).catch(() => {});
+async function loadPlaylists() {
+  try { const v = await tx("kv", "readonly", (s) => s.get("playlists")); playlists = Array.isArray(v) ? v : []; } catch { playlists = []; }
+}
+const ytSnap = (m) => ({ id: m.id, yt: m.yt, type: "youtube", title: m.title, name: m.name, artist: m.artist, thumb: m.thumb, duration: m.duration, views: m.views, likes: m.likes, folder: m.folder, size: 0, added: m.added || Date.now(), pos: 0, plays: 0, lastPlayed: 0 });
+function plItems(p) {
+  return p.ids.map((id) => {
+    const local = state.items.find((m) => m.id === id);
+    if (local) return local;
+    const snap = p.yt?.[id];
+    if (!snap) return null;
+    if (!plYt.has(id)) plYt.set(id, { ...snap });
+    return plYt.get(id);
+  }).filter(Boolean);
+}
+async function newPlaylist() {
+  const name = await ask({ title: "Yeni çalma listesi", placeholder: "Liste adı (ör. Yolculuk)", ok: "Oluştur" });
+  if (!name) return null;
+  const p = { id: uid(), name, ids: [], yt: {}, created: Date.now() };
+  playlists.push(p); savePlaylists();
+  toast(`"${name}" listesi oluşturuldu.`);
+  return p;
+}
+async function addToPlaylist(list) {
+  list = (Array.isArray(list) ? list : [list]).filter((m) => m && !m.sample);
+  if (!list.length) return;
+  const v = await sheet({ title: "Çalma listesine ekle", text: list.length === 1 ? list[0].title : `${list.length} parça`, items: [
+    ...playlists.map((p) => ({ label: `${p.name}  (${p.ids.length})`, value: p.id })),
+    { label: "+ Yeni liste oluştur", value: "__new" },
+  ] });
+  if (!v) return;
+  const p = v === "__new" ? await newPlaylist() : plById(v);
+  if (!p) return;
+  p.yt = p.yt || {};
+  let added = 0;
+  for (const m of list) {
+    if (p.ids.includes(m.id)) continue;
+    p.ids.push(m.id); added++;
+    if (m.type === "youtube") p.yt[m.id] = ytSnap(m);
+  }
+  savePlaylists();
+  toast(added ? `${added} parça "${p.name}" listesine eklendi.` : `Zaten "${p.name}" listesinde.`);
+  if (state.tab === "playlists") render();
+}
+function removeFromPlaylist(p, m) {
+  p.ids = p.ids.filter((id) => id !== m.id);
+  if (p.yt) delete p.yt[m.id];
+  savePlaylists(); render(); toast("Listeden çıkarıldı.");
+}
+function movePlaylistItem(p, m, dir) {
+  const i = p.ids.indexOf(m.id), j = i + dir;
+  if (i < 0 || j < 0 || j >= p.ids.length) return;
+  [p.ids[i], p.ids[j]] = [p.ids[j], p.ids[i]];
+  savePlaylists(); render();
+}
+function playPlaylist(p, shuffle) {
+  if (!p) return;
+  const list = plItems(p);
+  if (!list.length) { toast("Liste boş."); return; }
+  if (shuffle !== settings.shuffle) { settings.shuffle = shuffle; saveSettings(); updateModes(); }
+  state.queue = list;
+  rebuildOrder(shuffle ? Math.floor(Math.random() * list.length) : 0);
+  load(state.queue[state.order[state.pos]], true);
+  toast(`"${p.name}" çalınıyor${shuffle ? " (karışık)" : ""}.`, 1800);
+}
+async function renamePlaylist(p) {
+  if (!p) return;
+  const name = await ask({ title: "Listeyi yeniden adlandır", value: p.name, ok: "Kaydet" });
+  if (!name) return;
+  p.name = name; savePlaylists(); render();
+}
+async function deletePlaylist(p) {
+  if (!p) return;
+  const ok = await sheet({ title: `"${p.name}" silinsin mi?`, text: "Yalnızca liste silinir; şarkılar kütüphanede kalır.", items: [{ label: "Listeyi sil", value: 1, danger: true }], cancel: "Vazgeç" });
+  if (!ok) return;
+  playlists = playlists.filter((x) => x !== p); savePlaylists();
+  state.playlist = null; render(); toast("Liste silindi.");
+}
+
+/* ================================================================ uyku zamanlayıcı */
+const sleepT = { end: 0, endOfTrack: false, timer: null };
+const restoreVolume = () => { const v = settings.volume / 100; try { video.volume = v; audioEl.volume = v; ytMedia.volume = v; } catch {} };
+function sleepLabel() {
+  if (sleepT.endOfTrack) return "parça sonunda";
+  if (sleepT.end) return `${Math.max(1, Math.ceil((sleepT.end - Date.now()) / 60000))} dk`;
+  return "";
+}
+function clearSleep() {
+  clearInterval(sleepT.timer); sleepT.timer = null;
+  const wasFading = sleepT.end && sleepT.end - Date.now() < 16000;
+  sleepT.end = 0; sleepT.endOfTrack = false;
+  if (wasFading) restoreVolume();
+  updateInfo();
+}
+function sleepStop() {
+  media.pause(); clearSleep(); restoreVolume();
+  toast("Uyku zamanlayıcı: oynatma durduruldu. İyi geceler.", 3500);
+}
+function setSleep(v) {
+  clearSleep();
+  if (v === "track") { sleepT.endOfTrack = true; toast("Bu parça bitince oynatma duracak.", 2200); }
+  else {
+    sleepT.end = Date.now() + v * 60000;
+    sleepT.timer = setInterval(() => {
+      const left = sleepT.end - Date.now();
+      if (left <= 0) { sleepStop(); return; }
+      // Son 15 saniyede sesi yavaşça kıs (iPhone'da ses yalnızca tuşlarla değiştiği için orada doğrudan durur)
+      if (left <= 15000) { try { media.volume = (settings.volume / 100) * (left / 15000); } catch {} }
+      if (Math.round(left / 1000) % 20 === 0) updateInfo();
+    }, 1000);
+    toast(`Uyku zamanlayıcı: ${v} dakika sonra duracak.`, 2200);
+  }
+  updateInfo();
+}
+async function sleepMenu() {
+  const items = [15, 30, 45, 60, 90].map((x) => ({ label: `${x} dakika`, value: String(x) }));
+  items.push({ label: "Bu parça bitince", value: "track" });
+  if (sleepT.end || sleepT.endOfTrack) items.push({ label: "Zamanlayıcıyı kapat", value: "off", danger: true });
+  const v = await sheet({ title: "Uyku zamanlayıcı", text: sleepLabel() ? `Açık: ${sleepLabel()}` : "Seçtiğiniz süre dolunca müzik yavaşça kısılıp durur.", items });
+  if (!v) return;
+  if (v === "off") { clearSleep(); toast("Uyku zamanlayıcı kapatıldı.", 1600); }
+  else setSleep(v === "track" ? "track" : +v);
+}
+
+/* ================================================================ şarkı etiketleri (ID3) ve kapak resmi */
+const syncsafe = (b, i) => ((b[i] & 127) << 21) | ((b[i + 1] & 127) << 14) | ((b[i + 2] & 127) << 7) | (b[i + 3] & 127);
+const be32 = (b, i) => ((b[i] << 24) >>> 0) + (b[i + 1] << 16) + (b[i + 2] << 8) + b[i + 3];
+const be24 = (b, i) => (b[i] << 16) + (b[i + 1] << 8) + b[i + 2];
+function unsync(b) {
+  const out = new Uint8Array(b.length); let j = 0;
+  for (let i = 0; i < b.length; i++) { out[j++] = b[i]; if (b[i] === 0xff && b[i + 1] === 0) i++; }
+  return out.subarray(0, j);
+}
+function id3Text(d) {
+  if (!d.length) return "";
+  const enc = d[0], b = d.subarray(1);
+  let t;
+  try {
+    if (enc === 1) t = new TextDecoder(b[0] === 0xfe ? "utf-16be" : "utf-16le").decode(b[0] === 0xff || b[0] === 0xfe ? b.subarray(2) : b);
+    else if (enc === 2) t = new TextDecoder("utf-16be").decode(b);
+    else if (enc === 3) t = new TextDecoder("utf-8").decode(b);
+    else t = new TextDecoder("windows-1254").decode(b); // Türkçe dosyalarda eski etiketler genelde bu kodlamada
+  } catch { t = ""; }
+  return t.replace(/\u0000+$/g, "").replace(/\u0000/g, " / ").trim();
+}
+function id3Picture(d, v2) {
+  const enc = d[0]; let i = 1, mime = "image/jpeg";
+  if (v2) { const f = String.fromCharCode(d[1], d[2], d[3]).toLowerCase(); mime = f === "png" ? "image/png" : "image/jpeg"; i = 4; }
+  else { let s = ""; while (i < d.length && d[i]) s += String.fromCharCode(d[i++]); i++; if (s) mime = s.includes("/") ? s : `image/${s.toLowerCase()}`; }
+  i++; // resim türü
+  if (enc === 1 || enc === 2) { while (i + 1 < d.length && !(d[i] === 0 && d[i + 1] === 0)) i += 2; i += 2; }
+  else { while (i < d.length && d[i]) i++; i++; }
+  return i < d.length ? new Blob([d.slice(i)], { type: mime }) : null;
+}
+async function readTags(blob) {
+  const h = new Uint8Array(await blob.slice(0, 10).arrayBuffer());
+  if (h.length < 10 || h[0] !== 0x49 || h[1] !== 0x44 || h[2] !== 0x33) return null; // "ID3"
+  const ver = h[3], flags = h[5], size = syncsafe(h, 6);
+  if (ver < 2 || ver > 4 || size <= 0 || size > 30 * 1024 * 1024) return null;
+  let b = new Uint8Array(await blob.slice(10, 10 + size).arrayBuffer());
+  if ((flags & 0x80) && ver < 4) b = unsync(b);
+  let p = 0;
+  if ((flags & 0x40) && ver > 2) p = ver === 4 ? syncsafe(b, 0) : be32(b, 0) + 4;
+  const v2 = ver === 2, idLen = v2 ? 3 : 4, hdr = v2 ? 6 : 10;
+  const names = v2 ? { TT2: "title", TP1: "artist", TAL: "album", PIC: "pic" } : { TIT2: "title", TPE1: "artist", TALB: "album", APIC: "pic" };
+  const out = {};
+  while (p + hdr <= b.length) {
+    const id = String.fromCharCode(...b.subarray(p, p + idLen));
+    if (!/^[A-Z0-9]+$/.test(id)) break;
+    const fs = v2 ? be24(b, p + 3) : ver === 4 ? syncsafe(b, p + 4) : be32(b, p + 4);
+    const ff = v2 ? 0 : b[p + 9];
+    p += hdr;
+    if (fs <= 0 || p + fs > b.length) break;
+    let d = b.subarray(p, p + fs); p += fs;
+    const key = names[id];
+    if (!key || out[key]) continue;
+    if (ver === 4) { if (ff & 0x0c) continue; if (ff & 0x02) d = unsync(d); if (ff & 0x01) d = d.subarray(4); }
+    out[key] = key === "pic" ? id3Picture(d, v2) : id3Text(d);
+  }
+  return out;
+}
+async function coverThumb(blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const c = document.createElement("canvas"), S = 320; c.width = c.height = S;
+    const r = Math.max(S / img.naturalWidth, S / img.naturalHeight), w = img.naturalWidth * r, h = img.naturalHeight * r;
+    c.getContext("2d").drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+    return c.toDataURL("image/jpeg", 0.8);
+  } catch { return null; } finally { URL.revokeObjectURL(url); }
+}
+async function applyTags(m, blob) {
+  m.tagged = true;
+  const t = await readTags(blob).catch(() => null);
+  if (!t) return;
+  if (t.title) m.title = t.title;
+  if (t.artist) m.artist = t.artist;
+  if (t.album) m.album = t.album;
+  if (t.pic) { const th = await coverThumb(t.pic); if (th) m.thumb = th; }
+  if (state.current === m) updateNowPlaying();
+}
 
 /* ================================================================ dosya ekleme */
 const VIDEO_EXT = /\.(mp4|m4v|mov|webm|mkv|3gp|ogv|avi)$/i;
@@ -887,6 +1160,8 @@ async function blobOf(m) {
 async function probe(m) {
   const blob = await blobOf(m);
   if (!blob) return;
+  if (m.type === "audio" && !m.tagged) await applyTags(m, blob);
+  if (m.duration && (m.type !== "video" || m.thumb)) return;
   const url = URL.createObjectURL(blob);
   const el = document.createElement(m.type === "video" ? "video" : "audio");
   el.muted = true; el.preload = "metadata"; el.playsInline = true;
@@ -928,7 +1203,7 @@ function rebuildOrder(startIndex) {
 function playFromList(m) {
   if (!m) return;
   if (state.tab === "queue") { const i = state.queue.indexOf(m); state.pos = state.order.indexOf(i); load(m, true); return; }
-  const list = currentList().filter((x) => x.type === m.type);
+  const list = state.tab === "playlists" ? currentList() : currentList().filter((x) => x.type === m.type);
   state.queue = list.includes(m) ? list : [m, ...list];
   rebuildOrder(state.queue.indexOf(m));
   load(m, true);
@@ -1095,6 +1370,7 @@ onMedia("loadedmetadata", () => {
 onMedia("ended", () => {
   const m = state.current;
   if (m) { m.pos = 0; save(m); }
+  if (sleepT.endOfTrack) { sleepStop(); return; }
   if (settings.repeat === "one") { media.currentTime = 0; media.play().catch(() => {}); return; }
   if (settings.autoNext) next(true);
 });
@@ -1181,7 +1457,8 @@ function updateInfo() {
   const m = state.current;
   const d = isFinite(media.duration) ? media.duration : m?.duration || 0;
   const res = m?.type === "video" && (media.videoWidth || m.width) ? `${media.videoWidth || m.width} × ${media.videoHeight || m.height}   |   ` : "";
-  $("pInfo").textContent = `${res}${fmt(media.currentTime)} / ${fmt(d)}`;
+  const sl = sleepLabel();
+  $("pInfo").textContent = `${res}${fmt(media.currentTime)} / ${fmt(d)}${sl ? `   |   Uyku: ${sl}` : ""}`;
 }
 function updatePlayState() {
   const playing = !media.paused && !media.ended;
@@ -1206,7 +1483,7 @@ function updateNowPlaying() {
   $("artEmpty").hidden = !!m;
   if (isAudio) {
     $("artTitle").textContent = m.title;
-    $("artSub").textContent = [m.artist, m.folder].filter(Boolean).join("  •  ");
+    $("artSub").textContent = [m.artist, m.album || m.folder].filter(Boolean).join("  •  ");
     $("artCover").style.backgroundImage = m.thumb ? `url('${m.thumb}')` : "";
     $("artCover").querySelector("img").hidden = !!m.thumb;
   }
@@ -1215,7 +1492,7 @@ function updateNowPlaying() {
   if ("mediaSession" in navigator && m) {
     try {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: m.title, artist: m.artist || "Aurora Media Player", album: m.folder,
+        title: m.title, artist: m.artist || "Aurora Media Player", album: m.album || m.folder,
         artwork: [{ src: m.thumb || I.mark, sizes: m.type === "youtube" ? "480x360" : "320x180", type: m.thumb ? "image/jpeg" : "image/webp" }],
       });
     } catch {}
@@ -1351,6 +1628,8 @@ if ("mediaSession" in navigator) {
 /* ================================================================ menüler */
 async function playerMenu() {
   const v = await sheet({ title: "Oynatıcı", items: [
+    { label: sleepLabel() ? `Uyku zamanlayıcı (${sleepLabel()})` : "Uyku zamanlayıcı", value: "sleep" },
+    ...(state.current && !state.current.sample ? [{ label: "Çalma listesine ekle", value: "pl" }] : []),
     { label: `Oynatma hızı (${settings.speed}x)`, value: "speed" },
     { label: { off: "Tekrar: kapalı", all: "Tekrar: tümü", one: "Tekrar: tek parça" }[settings.repeat], value: "repeat" },
     { label: "Medya bilgisi", value: "info" },
@@ -1358,7 +1637,9 @@ async function playerMenu() {
     ...(state.current && state.current.type !== "youtube" && !isMp3(state.current) ? [{ label: "MP3'e dönüştür", value: "mp3" }] : []),
     { label: "Durdur", value: "stop" },
   ] });
-  if (v === "speed") {
+  if (v === "sleep") sleepMenu();
+  else if (v === "pl" && state.current) addToPlaylist(state.current);
+  else if (v === "speed") {
     const s = await sheet({ title: "Oynatma hızı", items: [0.5, 0.75, 1, 1.25, 1.5, 2].map((x) => ({ label: x === 1 ? "1x (Normal)" : `${x}x`, value: String(x) })) });
     if (s) { settings.speed = +s; media.playbackRate = settings.speed; saveSettings(); }
   } else if (v === "repeat") $("btnRepeat").click();
@@ -1381,10 +1662,14 @@ async function itemMenu(m) {
   if (m.type === "youtube") {
     const v = await sheet({ title: m.title, text: m.artist, items: [
       { label: "Çal", value: "play" }, { label: "Sıradaki olarak ekle", value: "nextup" },
+      { label: "Çalma listesine ekle", value: "pl" },
+      ...plEditItems(m),
       { label: "Bu şarkıdan mix başlat (YouTube Music, arka planda çalar)", value: "radio" },
       { label: "YouTube Music'te aç", value: "ytm" }, { label: `"${m.artist}" şarkılarını ara`, value: "artist" },
     ] });
+    if (plEditDo(v, m)) return;
     if (v === "play") playFromList(m);
+    else if (v === "pl") addToPlaylist(m);
     else if (v === "nextup") playNextUp(m);
     else if (v === "ytm") openExternal(ytmUrl(m));
     else if (v === "radio") { if (state.current?.type === "youtube") media.pause(); openExternal(ytmRadioUrl(m)); }
@@ -1394,12 +1679,16 @@ async function itemMenu(m) {
   const v = await sheet({ title: m.title, items: [
     { label: "Oynat", value: "play" },
     { label: m.fav ? "Favorilerden çıkar" : "Favorilere ekle", value: "fav" },
+    { label: "Çalma listesine ekle", value: "pl" },
+    ...plEditItems(m),
     { label: "Medya bilgisi", value: "info" },
     ...(isMp3(m) ? [] : [{ label: "MP3'e dönüştür", value: "mp3" }]),
     { label: "Cihaza kaydet (indir)", value: "dl" },
     { label: "Kütüphaneden kaldır", value: "del", danger: true },
   ] });
-  if (v === "mp3") convertItems([m]);
+  if (plEditDo(v, m)) return;
+  if (v === "pl") addToPlaylist(m);
+  else if (v === "mp3") convertItems([m]);
   else if (v === "dl") downloadItem(m);
   else if (v === "play") playFromList(m);
   else if (v === "fav") toggleFav(m);
@@ -1409,12 +1698,32 @@ async function itemMenu(m) {
     if (ok) removeItem(m);
   }
 }
+/* Açık çalma listesindeyken: sırala / listeden çıkar */
+function plEditItems(m) {
+  const p = state.tab === "playlists" && plById(state.playlist);
+  if (!p) return [];
+  const i = p.ids.indexOf(m.id);
+  return [
+    ...(i > 0 ? [{ label: "Yukarı taşı", value: "plup" }] : []),
+    ...(i >= 0 && i < p.ids.length - 1 ? [{ label: "Aşağı taşı", value: "pldown" }] : []),
+    { label: "Bu listeden çıkar", value: "plrm", danger: true },
+  ];
+}
+function plEditDo(v, m) {
+  const p = plById(state.playlist);
+  if (!p || !["plup", "pldown", "plrm"].includes(v)) return false;
+  if (v === "plrm") removeFromPlaylist(p, m); else movePlaylistItem(p, m, v === "plup" ? -1 : 1);
+  return true;
+}
 function removeItem(m) {
   if (state.current === m) { media.pause(); media.removeAttribute("src"); media.load(); state.current = null; updateNowPlaying(); }
   state.items = state.items.filter((x) => x !== m);
   const qi = state.queue.indexOf(m);
   if (qi >= 0) { state.queue.splice(qi, 1); rebuildOrder(state.current ? state.queue.indexOf(state.current) : -1); }
   if (!m.sample) dbDelete(m.id);
+  let plChanged = false;
+  for (const p of playlists) if (p.ids.includes(m.id)) { p.ids = p.ids.filter((id) => id !== m.id); plChanged = true; }
+  if (plChanged) savePlaylists();
   render(); toast("Kaldırıldı.");
 }
 $("btnMenu").onclick = async () => {
@@ -1422,6 +1731,9 @@ $("btnMenu").onclick = async () => {
   if (fsSupported) items.push({ label: "Müzik klasörü bağla (otomatik tarama)", value: "link" });
   if (dirs.length && fsSupported) items.push({ label: "Bağlı klasörleri şimdi tara", value: "scan" });
   if ("webkitdirectory" in $("folderInput") && !isIOS) items.push({ label: "Klasör ekle (bir kerelik kopya)", value: "folder" });
+  const view = state.tab !== "settings" && state.tab !== "playlists" ? currentList().filter((m) => !m.sample) : [];
+  if (view.length > 1) items.push({ label: `Bu listedeki ${view.length} parçayı çalma listesine ekle`, value: "plall" });
+  items.push({ label: "Uyku zamanlayıcı", value: "sleep" });
   items.push({ label: "Sıralama", value: "sort" }, { label: "Oynatma sırası", value: "queue" }, { label: "Ayarlar", value: "settings" }, { label: "Hakkında", value: "about" });
   const v = await sheet({ title: "Aurora Media Player", items });
   if (v === "add") addFiles();
@@ -1429,10 +1741,12 @@ $("btnMenu").onclick = async () => {
   else if (v === "link") linkFolder();
   else if (v === "scan") scanAll(true);
   else if (v === "folder") { $("folderInput").value = ""; $("folderInput").click(); }
+  else if (v === "plall") addToPlaylist(view);
+  else if (v === "sleep") sleepMenu();
   else if (v === "sort") $("btnSort").click();
   else if (v === "queue") $("btnQueue").click();
   else if (v === "settings") selectTab("settings");
-  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 2.0\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
+  else if (v === "about") sheet({ title: "TROÇKİ® AURORA MEDIA PLAYER", text: "Web sürümü 2.1\n\nSen İzle, Dünya Güzelleşsin…\n\nTROÇKİ® Software\nDüşün • Keşfet • Üret • Paylaş" });
 };
 
 /* ================================================================ ayarlar sekmesi */
@@ -1460,6 +1774,7 @@ async function renderSettings() {
     <div class="btn-row">
       <button class="btn" id="setAdd">Dosya ekle</button>
       <button class="btn" id="setThumbs">Küçük resimleri yenile</button>
+      <button class="btn" id="setTags">Şarkı etiketlerini ve kapakları oku</button>
     </div>
     <h4>YOUTUBE MÜZİK</h4>
     <div class="set" style="display:grid;gap:10px"><div><b>YouTube API anahtarı</b><small>Sanatçı aramak için gerekli. Yalnızca bu cihazda saklanır, hiçbir yere gönderilmez (YouTube'a yapılan aramalar dışında).</small></div>
@@ -1484,7 +1799,7 @@ async function renderSettings() {
     </div>
     <button class="btn danger" id="setWipe" ${persisted ? "" : "disabled"}>Tüm dosyaları kaldır (${persisted})</button>
     <h4>HAKKINDA</h4>
-    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 2.0 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
+    <div class="set about"><img src="${I.logo}" alt="Aurora Media Player"><b>TROÇKİ® AURORA MEDIA PLAYER</b><small>Web sürümü 2.1 · Android ve iPhone uygulamasının tarayıcı sürümü</small><small style="color:var(--cyan)">Düşün • Keşfet • Üret • Paylaş</small></div>`;
   const saveKey = (announce) => {
     const v = $("ytKey").value.trim();
     if (v === (settings.ytKey || "")) { if (announce) toast(v ? "Anahtar kayıtlı." : "Anahtar boş."); return; }
@@ -1506,6 +1821,7 @@ async function renderSettings() {
     settings.mp3kbps = +b.dataset.kbps; saveSettings();
     $("kbpsSeg").querySelectorAll("[data-kbps]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
   }));
+  $("setTags").onclick = () => { const a = state.items.filter((m) => m.type === "audio" && !m.sample); a.forEach((m) => { m.tagged = false; probeQueue.push(m); }); runProbe(); toast(a.length ? `${a.length} şarkının etiketleri okunuyor…` : "Kütüphanede şarkı yok."); };
   $("setThumbs").onclick = () => { state.items.forEach((m) => { if (m.type === "video") { m.thumb = null; probeQueue.push(m); } }); runProbe(); toast("Küçük resimler yenileniyor…"); };
   $("setHistory").onclick = async () => {
     if (!(await sheet({ title: "Geçmişi temizle", text: "Son oynatılanlar ve kaldığınız yerler silinsin mi?", items: [{ label: "Temizle", value: 1, danger: true }], cancel: "Vazgeç" }))) return;
@@ -2129,6 +2445,7 @@ function makeSample() {
   db = await openDb();
   try { navigator.storage?.persist?.(); } catch {}
   await restoreSettingsBackup();
+  await loadPlaylists();
   const metas = (await dbAllMeta()) || [];
   state.items = metas;
   if (!state.items.length) state.items.push(makeSample());
@@ -2137,7 +2454,7 @@ function makeSample() {
 
   const last = state.items.find((m) => m.id === settings.last) || (state.items[0]?.sample ? state.items[0] : null);
   if (last) prepare(last, state.items.filter((m) => m.type === last.type));
-  probeQueue.push(...state.items.filter((m) => !m.sample && (!m.duration || (m.type === "video" && !m.thumb))));
+  probeQueue.push(...state.items.filter((m) => !m.sample && (!m.duration || (m.type === "video" && !m.thumb) || (m.type === "audio" && !m.tagged))));
   runProbe();
 
   if (fsSupported) {
