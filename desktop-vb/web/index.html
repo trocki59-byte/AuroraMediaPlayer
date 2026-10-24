@@ -1140,7 +1140,12 @@ async function importFiles(files) {
   try { navigator.storage?.persist?.(); } catch {}
   probeQueue.push(...added);
   runProbe();
-  if (!state.current || wasSample) { media.pause(); prepare(added[0], [...added]); }
+  if (!state.current || wasSample) {
+    media.pause();
+    // Sıra yalnızca yeni eklenenlerden değil, aynı türdeki tüm kütüphaneden oluşsun (tek dosya eklenince aynı şarkı dönüp durmasın)
+    const t = added[0].type;
+    prepare(added[0], [...added, ...state.items.filter((x) => x.type === t && !x.sample && !added.includes(x))]);
+  }
 }
 
 /* Süre, çözünürlük ve küçük resim: gizli bir video öğesiyle sırayla okunur */
@@ -1389,8 +1394,13 @@ onMedia("ended", () => {
   const m = state.current;
   if (m) { m.pos = 0; save(m); }
   if (sleepT.endOfTrack) { sleepStop(); return; }
-  if (settings.repeat === "one") { media.currentTime = 0; media.play().catch(() => {}); return; }
+  if (settings.repeat === "one") {
+    media.currentTime = 0; media.play().catch(() => {});
+    if (!window.__repeatHint) { window.__repeatHint = true; toast("Tek parça tekrarı açık, aynı şarkı yeniden çalıyor. Sıradakine geçmesi için alttaki tekrar düğmesine dokunup \"Tümünü tekrarla\" yapın.", 6000); }
+    return;
+  }
   if (settings.autoNext) next(true);
+  else if (!window.__autoNextHint) { window.__autoNextHint = true; toast("\"Otomatik sonraki\" kapalı olduğu için oynatma durdu. Ayarlar'dan açabilirsiniz.", 5000); }
 });
 onMedia("error", () => {
   if (!state.current) return;
@@ -1409,7 +1419,17 @@ onMedia("timeupdate", () => { updateTime(); saveProgress(false); });
 onMedia("durationchange", updateTime);
 ["playing", "pause", "seeked", "ratechange", "loadedmetadata"].forEach((ev) => onMedia(ev, updatePositionState));
 
+/* Sırada tek parça kaldıysa kütüphanedeki aynı türden parçalarla genişlet */
+function widenQueue() {
+  const cur = state.current;
+  if (!cur || cur.type === "youtube" || state.queue.length > 1) return;
+  const pool = state.items.filter((x) => x.type === cur.type && !x.sample);
+  if (pool.length < 2) return;
+  state.queue = pool.includes(cur) ? pool : [cur, ...pool];
+  rebuildOrder(state.queue.indexOf(cur));
+}
 function next(auto = false) {
+  widenQueue();
   if (!state.order.length) return;
   let p = state.pos + 1;
   if (p >= state.order.length) {
@@ -1522,6 +1542,7 @@ function updateModes() {
   $("btnShuffle").setAttribute("aria-pressed", String(settings.shuffle));
   $("btnRepeat").querySelector("img").src = { off: I.repeat, all: I.repeat_on, one: I.repeat_one }[settings.repeat];
   $("btnRepeat").setAttribute("aria-label", { off: "Tekrar kapalı", all: "Tümünü tekrarla", one: "Tek parçayı tekrarla" }[settings.repeat]);
+  $("btnRepeat").title = { off: "Tekrar kapalı", all: "Tümünü tekrarla", one: "Tek parça tekrarlanıyor — dokunun: kapat" }[settings.repeat];
   const v = settings.volume;
   $("vol").value = v; $("volVal").textContent = v; setRange($("vol"), v / 100);
   $("volIco").src = media.muted || v === 0 ? I.mute : I.volume;
